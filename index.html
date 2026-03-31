@@ -55,7 +55,6 @@
         .logo-section { display: flex; align-items: center; gap: 15px; flex: 1; overflow: hidden; }
         .logo img { height: 35px; cursor: pointer; flex-shrink: 0; }
 
-        /* Breaking News Ticker */
         .breaking-news {
             display: flex; align-items: center; 
             background: var(--bg-page); padding: 5px 10px; border-radius: 20px;
@@ -103,7 +102,6 @@
 
         main { padding: 30px 10%; max-width: 1200px; margin: 0 auto; min-height: 80vh; }
 
-        /* News Cards */
         .news-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 25px; }
         .news-item {
             background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; 
@@ -116,7 +114,6 @@
         .news-info h3 { margin: 0 0 10px 0; font-size: 16px; color: var(--text-main); }
         .news-info p { font-size: 13px; color: var(--text-muted); -webkit-line-clamp: 2; display: -webkit-box; -webkit-box-orient: vertical; overflow: hidden; }
 
-        /* Detail View */
         #detailView { display: none; }
         .detail-video { width: 100%; aspect-ratio: 16/9; background: #000; border-radius: 12px; overflow: hidden; margin: 20px 0; }
         .detail-content { font-size: 17px; line-height: 1.8; white-space: pre-wrap; margin-bottom: 40px; }
@@ -126,7 +123,6 @@
         .share-copy { background: #eee; color: #333; }
         .share-tw { background: #1da1f2; color: white; }
 
-        /* Comments & Sub-comments */
         .comment-section { margin-top: 50px; border-top: 2px solid var(--border); padding-top: 30px; }
         .comment-input-box { margin-bottom: 30px; }
         .comment-input { width: 100%; background: var(--bg-page); border: 1px solid var(--border); color: var(--text-main); padding: 15px; border-radius: 10px; box-sizing: border-box; resize: none; }
@@ -248,9 +244,17 @@
         const provider = new GoogleAuthProvider();
 
         let allNews = [];
-        let currentNewsId = null;
+        let currentNewsId = null; // 현재 보고 있는 뉴스의 ID
 
-        // --- UI Logic ---
+        // --- 전역 함수 등록 (HTML에서 호출 가능하도록) ---
+        window.login = () => signInWithPopup(auth, provider);
+        window.showToast = (m) => {
+            const t = document.getElementById('toast');
+            t.innerText = m; t.style.display='block';
+            setTimeout(()=>t.style.display='none', 2000);
+        };
+
+        // --- 테마 및 UI ---
         const themeToggle = document.getElementById('themeToggle');
         themeToggle.onclick = () => {
             const current = document.body.getAttribute('data-theme');
@@ -271,28 +275,15 @@
             document.getElementById("readingProgress").style.width = scrolled + "%";
         };
 
-        // --- Search ---
-        const searchInput = document.getElementById('searchInput');
-        searchInput.onkeypress = (e) => {
-            if(e.key === 'Enter') {
-                const keyword = searchInput.value.trim();
-                if(keyword) location.hash = `#/search/${encodeURIComponent(keyword)}`;
-            }
-        };
-
-        // --- Load Data ---
+        // --- 뉴스 로드 & 렌더링 ---
         window.loadNewsData = async (filterKeyword = "") => {
             const grid = document.getElementById('newsGrid');
             grid.innerHTML = '<p>뉴스를 불러오는 중입니다...</p>';
-            
             try {
                 const q = query(collection(db, "news"), orderBy("createdAt", "desc"));
                 const snap = await getDocs(q);
                 allNews = snap.docs.map(d => ({id: d.id, ...d.data()}));
-
-                if(allNews.length > 0) {
-                    document.getElementById('breakingTicker').innerText = allNews[0].title;
-                }
+                if(allNews.length > 0) document.getElementById('breakingTicker').innerText = allNews[0].title;
                 renderNewsList(filterKeyword);
             } catch(e) { console.error(e); }
         };
@@ -301,7 +292,6 @@
             const grid = document.getElementById('newsGrid');
             const resultTitle = document.getElementById('searchResultTitle');
             grid.innerHTML = '';
-
             let filtered = allNews;
             if(keyword) {
                 filtered = allNews.filter(n => n.title.includes(keyword) || n.content.includes(keyword));
@@ -310,7 +300,6 @@
             } else {
                 resultTitle.style.display = 'none';
             }
-
             filtered.forEach(news => {
                 const card = document.createElement('div');
                 card.className = 'news-item';
@@ -327,14 +316,12 @@
         }
 
         window.showDetail = async (id) => {
-            currentNewsId = id;
+            currentNewsId = id; // 전역 변수 업데이트
             document.getElementById('listView').style.display = 'none';
             document.getElementById('detailView').style.display = 'block';
             window.scrollTo(0,0);
-
             const area = document.getElementById('detailArea');
             area.innerHTML = '상세 내용을 불러오는 중...';
-
             const snap = await getDoc(doc(db, "news", id));
             if(snap.exists()) {
                 const data = snap.data();
@@ -350,18 +337,16 @@
             }
         };
 
-        // --- Comments & Functions ---
+        // --- 댓글 & 답글 로직 ---
         async function loadComments(newsId) {
             const list = document.getElementById('commentList');
             const q = query(collection(db, "news", newsId, "comments"), orderBy("createdAt", "asc"));
-            
             onSnapshot(q, (snap) => {
                 document.getElementById('commentCount').innerText = snap.size;
                 list.innerHTML = '';
                 snap.docs.forEach(d => {
                     const c = d.data();
                     const isMyComment = auth.currentUser?.uid === c.uid;
-                    
                     const card = document.createElement('div');
                     card.className = 'comment-card';
                     card.innerHTML = `
@@ -369,7 +354,7 @@
                             <img src="${c.userImg || 'https://via.placeholder.com/30'}" class="comment-user-img">
                             <div>
                                 <span class="comment-name">${c.userName}</span>
-                                <span class="comment-date">${new Date(c.createdAt?.seconds*1000).toLocaleString()}</span>
+                                <span class="comment-date">${c.createdAt ? new Date(c.createdAt.seconds*1000).toLocaleString() : '방금 전'}</span>
                             </div>
                         </div>
                         <div id="text-${d.id}">${c.text}</div>
@@ -402,8 +387,9 @@
                 replyList.innerHTML = snap.docs.map(rd => {
                     const r = rd.data();
                     return `
-                        <div style="font-size:13px; margin-bottom:10px;">
-                            <strong>${r.userName}</strong>: ${r.text} <small style="color:gray">${new Date(r.createdAt?.seconds*1000).toLocaleTimeString()}</small>
+                        <div style="font-size:13px; margin-bottom:10px; padding:5px 0; border-bottom: 1px dashed var(--border);">
+                            <strong>${r.userName}</strong>: ${r.text} 
+                            <small style="color:gray; margin-left:5px">${r.createdAt ? new Date(r.createdAt.seconds*1000).toLocaleTimeString() : '방금 전'}</small>
                         </div>
                     `;
                 }).join('');
@@ -429,12 +415,20 @@
         window.submitReply = async (commentId) => {
             if(!auth.currentUser) return window.showToast("로그인이 필요합니다.");
             const input = document.getElementById(`reply-input-${commentId}`);
-            if(!input.value.trim()) return;
-            await addDoc(collection(db, "news", currentNewsId, "comments", commentId, "replies"), {
-                text: input.value, uid: auth.currentUser.uid, userName: auth.currentUser.displayName, createdAt: serverTimestamp()
-            });
-            input.value = '';
-            window.toggleReply(commentId);
+            const text = input.value.trim();
+            if(!text) return;
+            
+            try {
+                await addDoc(collection(db, "news", currentNewsId, "comments", commentId, "replies"), {
+                    text: text, uid: auth.currentUser.uid, userName: auth.currentUser.displayName, createdAt: serverTimestamp()
+                });
+                input.value = '';
+                window.toggleReply(commentId);
+                window.showToast("답글이 등록되었습니다.");
+            } catch(e) {
+                console.error(e);
+                window.showToast("답글 등록 실패");
+            }
         };
 
         window.reactComment = async (id, field) => {
@@ -461,7 +455,7 @@
             alert("신고가 접수되었습니다. 검토 후 처리하겠습니다.");
         };
 
-        // --- Share & Routing ---
+        // --- 공유 및 검색 ---
         window.copyLink = () => {
             const dummy = document.createElement('input');
             document.body.appendChild(dummy);
@@ -475,6 +469,14 @@
         window.shareTwitter = () => {
             const text = "조이고 뉴스에서 이 소식을 확인해보세요!";
             window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(window.location.href)}`);
+        };
+
+        const searchInput = document.getElementById('searchInput');
+        searchInput.onkeypress = (e) => {
+            if(e.key === 'Enter') {
+                const keyword = searchInput.value.trim();
+                if(keyword) location.hash = `#/search/${encodeURIComponent(keyword)}`;
+            }
         };
 
         function handleRoute() {
@@ -494,7 +496,6 @@
         window.addEventListener('hashchange', handleRoute);
         window.addEventListener('load', handleRoute);
 
-        // --- Auth ---
         onAuthStateChanged(auth, (user) => {
             const container = document.getElementById('authContainer');
             if(user) {
@@ -503,16 +504,10 @@
                 container.innerHTML = `<button onclick="window.login()" style="padding:5px 12px; background:var(--joygo-blue); color:white; border:none; border-radius:20px; cursor:pointer; font-size:12px; font-weight:bold;">로그인</button>`;
             }
         });
-        window.login = () => signInWithPopup(auth, provider);
-        window.showToast = (m) => {
-            const t = document.getElementById('toast');
-            t.innerText = m; t.style.display='block';
-            setTimeout(()=>t.style.display='none', 2000);
-        };
     </script>
 
     <script>
-        // 날씨 및 날짜 로직
+        // 날씨 및 날짜 로직 (비-모듈)
         function initInfo() {
             const dateEl = document.getElementById('realTimeDate');
             const now = new Date();
@@ -520,7 +515,6 @@
             dateEl.innerText = `${now.getFullYear()}. ${now.getMonth() + 1}. ${now.getDate()}. (${days[now.getDay()]})`;
             getWeather();
         }
-
         async function getWeather() {
             const API_KEY = 'f9588dfba7000b48e2a636ba0ded59c5';
             const weatherEl = document.getElementById('weatherDisplay');
