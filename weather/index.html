@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>조이고 웨더 - JoyGO News Weather</title>
+    <style>
+        /* 기본 설정 및 조이고 브랜드 컬러 */
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700;900&display=swap');
+        
+        :root {
+            --joygo-blue: #6166fb;
+            --joygo-dark: #1e293b;
+            --bg-light: #f8fafc;
+            --text-main: #1a1a1a;
+            --text-muted: #64748b;
+            --border: #e2e8f0;
+            --white: #ffffff;
+        }
+
+        * { box-sizing: border-box; }
+        body { 
+            margin: 0; padding: 0; 
+            font-family: 'Noto Sans KR', sans-serif; 
+            color: var(--text-main);
+            background-color: var(--bg-light);
+            line-height: 1.6;
+        }
+
+        /* 헤더 섹션 */
+        .top-accent-bar { height: 8px; background-color: var(--joygo-blue); width: 100%; }
+        header {
+            padding: 15px 10%;
+            background: var(--white);
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.02);
+        }
+        .logo img { height: 35px; cursor: pointer; }
+
+        /* 메인 레이아웃 */
+        main {
+            padding: 40px 10%;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .search-container {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 30px;
+        }
+        .search-container input {
+            flex: 1;
+            padding: 12px 20px;
+            border: 2px solid var(--border);
+            border-radius: 12px;
+            font-size: 16px;
+            outline: none;
+            transition: border-color 0.3s;
+        }
+        .search-container input:focus { border-color: var(--joygo-blue); }
+        .btn {
+            padding: 12px 25px;
+            border-radius: 12px;
+            border: none;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .btn-primary { background: var(--joygo-blue); color: white; }
+        .btn-primary:hover { opacity: 0.9; transform: translateY(-1px); }
+        .btn-location { background: #e0e7ff; color: var(--joygo-blue); }
+
+        /* 날씨 카드 그리드 */
+        .weather-grid {
+            display: grid;
+            grid-template-columns: 1.2fr 0.8fr;
+            gap: 25px;
+        }
+
+        .card {
+            background: var(--white);
+            border-radius: 24px;
+            padding: 35px;
+            border: 1px solid var(--border);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.03);
+        }
+
+        /* 메인 날씨 디스플레이 */
+        .main-display {
+            background: linear-gradient(135deg, #6166fb 0%, #4338ca 100%);
+            color: white;
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            overflow: hidden;
+        }
+        .main-display::before {
+            content: '';
+            position: absolute;
+            top: -50px; right: -50px;
+            width: 150px; height: 150px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 50%;
+        }
+
+        .city-name { font-size: 28px; font-weight: 900; margin-bottom: 5px; }
+        .weather-date { font-size: 14px; opacity: 0.8; margin-bottom: 20px; }
+        .temp-large { font-size: 100px; font-weight: 900; line-height: 1; margin: 15px 0; }
+        .weather-icon-main { width: 150px; filter: drop-shadow(0 0 20px rgba(255,255,255,0.3)); }
+        .condition-text { font-size: 22px; font-weight: 700; margin-top: -10px; }
+
+        /* 서브 디테일 */
+        .detail-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            margin-top: 30px;
+            width: 100%;
+        }
+        .detail-item {
+            background: rgba(255,255,255,0.15);
+            padding: 15px;
+            border-radius: 16px;
+            backdrop-filter: blur(5px);
+            text-align: left;
+        }
+        .detail-label { font-size: 12px; opacity: 0.8; display: block; }
+        .detail-value { font-size: 18px; font-weight: 700; }
+
+        /* 우측 브리핑 섹션 */
+        .briefing-section {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        .section-tag {
+            display: inline-block;
+            background: #f1f5f9;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 800;
+            color: var(--joygo-blue);
+            margin-bottom: 15px;
+        }
+        .briefing-title { font-size: 20px; font-weight: 900; margin-bottom: 15px; }
+        .briefing-content { color: var(--text-muted); font-size: 15px; }
+
+        /* 일출/일몰 시간 */
+        .sun-times {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid var(--border);
+        }
+        .sun-item { text-align: center; flex: 1; }
+        .sun-item span { display: block; font-size: 12px; color: var(--text-muted); }
+        .sun-item b { font-size: 16px; color: var(--joygo-dark); }
+
+        footer {
+            margin-top: 60px;
+            padding: 40px 10%;
+            border-top: 1px solid var(--border);
+            background: white;
+            text-align: center;
+            font-size: 12px;
+            color: #94a3b8;
+        }
+
+        /* 반응형 */
+        @media (max-width: 900px) {
+            .weather-grid { grid-template-columns: 1fr; }
+            main { padding: 20px 5%; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="top-accent-bar"></div>
+
+<header>
+    <div class="logo">
+        <a href="#"><img src="https://i.postimg.cc/PrK5Ysh4/joygo-logo-qenyzfo8a6cul319bqetl2et0yfhgwizrrfan2szcw.png" alt="JoyGO News Weather"></a>
+    </div>
+    <div id="headerTime" style="font-size: 14px; font-weight: bold; color: var(--joygo-blue);"></div>
+</header>
+
+<main>
+    <div class="search-container">
+        <input type="text" id="cityInput" placeholder="도시 이름을 입력하세요 (예: Seoul, Tokyo, London)">
+        <button class="btn btn-primary" onclick="searchWeather()">조회</button>
+        <button class="btn btn-location" onclick="getLocationWeather()">📍 내 위치</button>
+    </div>
+
+    <div class="weather-grid">
+        <!-- 왼쪽: 메인 날씨 카드 -->
+        <div class="card main-display" id="mainCard">
+            <div class="city-name" id="cityName">데이터를 불러오는 중...</div>
+            <div class="weather-date" id="currentDate">--년 --월 --일</div>
+            
+            <div id="weatherIconContainer">
+                <img src="" class="weather-icon-main" id="mainIcon" style="display:none;">
+            </div>
+            
+            <div class="temp-large"><span id="mainTemp">--</span>°</div>
+            <div class="condition-text" id="weatherDesc">날씨 상태 대기 중</div>
+
+            <div class="detail-grid">
+                <div class="detail-item">
+                    <span class="detail-label">체감 온도</span>
+                    <span class="detail-value"><span id="feelsLike">--</span>°C</span>
+                </div>
+                <div class="detail-item">
+                    <span class="detail-label">습도</span>
+                    <span class="detail-value"><span id="humidity">--</span>%</span>
+                </div>
+                <div class="detail-item">
+                    <span class="detail-label">풍속</span>
+                    <span class="detail-value"><span id="windSpeed">--</span> m/s</span>
+                </div>
+                <div class="detail-item">
+                    <span class="detail-label">구름량</span>
+                    <span class="detail-value"><span id="clouds">--</span>%</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- 오른쪽: 생활 정보 및 기타 -->
+        <div class="briefing-section">
+            <div class="card">
+                <span class="section-tag">JOYGO BRIEFING</span>
+                <div class="briefing-title">오늘의 생활 기상 지수</div>
+                <div class="briefing-content" id="lifeAdvice">
+                    날씨 데이터를 기반으로 조이고 뉴스가 분석 중입니다.
+                </div>
+                
+                <div class="sun-times">
+                    <div class="sun-item">
+                        <span>일출</span>
+                        <b id="sunriseTime">--:--</b>
+                    </div>
+                    <div class="sun-item">
+                        <span>일몰</span>
+                        <b id="sunsetTime">--:--</b>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="briefing-title" style="font-size: 16px;">관심 지역 기온</div>
+                <div style="font-size: 14px; color: var(--text-muted);">
+                    <div style="display:flex; justify-content:space-between; margin-bottom:10px;">
+                        <span>서울 (Seoul)</span>
+                        <b id="sideSeoul">--°</b>
+                    </div>
+                    <div style="display:flex; justify-content:space-between; margin-bottom:10px;">
+                        <span>부산 (Busan)</span>
+                        <b id="sideBusan">--°</b>
+                    </div>
+                    <div style="display:flex; justify-content:space-between;">
+                        <span>제주 (Jeju)</span>
+                        <b id="sideJeju">--°</b>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</main>
+
+<footer>
+    <b>㈜겨벌랑</b> | 조이고 웨더 서비스 본부 <br>
+    본 서비스는 <b>OpenWeatherMap API</b>의 실시간 데이터를 사용합니다. <br>
+    Copyright © Joygo News Weather. All rights reserved.
+</footer>
+
+<script>
+    const API_KEY = 'f9588dfba7000b48e2a636ba0ded59c5';
+
+    // 시간 및 날짜 초기화
+    function updateDateTime() {
+        const now = new Date();
+        const options = { year: 'numeric', month: 'long', day: 'numeric', weekday: 'short' };
+        document.getElementById('currentDate').innerText = now.toLocaleDateString('ko-KR', options);
+        document.getElementById('headerTime').innerText = now.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' });
+    }
+
+    // 시간 포맷팅 (Unix to HH:MM)
+    function formatUnixTime(unix) {
+        const date = new Date(unix * 1000);
+        return date.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', hour12: false });
+    }
+
+    // 생활 조언 생성기
+    function setLifeAdvice(temp, desc, humidity) {
+        let advice = "";
+        if (temp > 28) advice = "폭염이 우려됩니다. 야외 활동을 자제하고 수분을 충분히 섭취하세요. 🍦";
+        else if (temp < 0) advice = "강추위가 기승을 부립니다. 내복과 두꺼운 외투는 필수입니다! 🧤";
+        else if (desc.includes('비')) advice = "비가 내리고 있습니다. 가시거리가 짧으니 운전 조심하시고 우산 꼭 챙기세요. ☔";
+        else if (humidity > 70) advice = "습도가 높아 불쾌지수가 상승할 수 있습니다. 실내 제습에 신경 써주세요. 💧";
+        else advice = "전반적으로 쾌적한 날씨입니다. 가벼운 산책으로 기분 전환 어떠신가요? 😊";
+        
+        document.getElementById('lifeAdvice').innerText = advice;
+    }
+
+    // 날씨 렌더링
+    async function fetchWeather(city) {
+        try {
+            const url = `https://api.openweathermap.org/data/2.5/weather?q=${city}&appid=${API_KEY}&units=metric&lang=kr`;
+            const response = await fetch(url);
+            const data = await response.json();
+
+            if (!data || data.cod !== 200) {
+                console.warn(`City not found: ${city}`);
+                if (city !== 'Seoul') alert("도시를 찾을 수 없습니다. (영문으로 입력해보세요)");
+                return;
+            }
+
+            // 메인 데이터 매핑
+            document.getElementById('cityName').innerText = `${data.name}, ${data.sys.country}`;
+            document.getElementById('mainTemp').innerText = Math.round(data.main.temp);
+            document.getElementById('weatherDesc').innerText = data.weather[0].description;
+            document.getElementById('feelsLike').innerText = Math.round(data.main.feels_like);
+            document.getElementById('humidity').innerText = data.main.humidity;
+            document.getElementById('windSpeed').innerText = data.wind.speed;
+            document.getElementById('clouds').innerText = data.clouds.all;
+            
+            // 아이콘 설정
+            const iconImg = document.getElementById('mainIcon');
+            iconImg.src = `https://openweathermap.org/img/wn/${data.weather[0].icon}@4x.png`;
+            iconImg.style.display = 'block';
+
+            // 일출/일몰
+            document.getElementById('sunriseTime').innerText = formatUnixTime(data.sys.sunrise);
+            document.getElementById('sunsetTime').innerText = formatUnixTime(data.sys.sunset);
+
+            // 어드바이스
+            setLifeAdvice(data.main.temp, data.weather[0].description, data.main.humidity);
+
+        } catch (error) {
+            console.error("Main Weather Fetch Error:", error);
+        }
+    }
+
+    // 사이드바 주요 도시 날씨 요약 (Error Fix: null check added)
+    async function fetchSideCities() {
+        const cities = { 'Seoul': 'sideSeoul', 'Busan': 'sideBusan', 'Jeju': 'sideJeju' };
+        for (const [city, elementId] of Object.entries(cities)) {
+            try {
+                const url = `https://api.openweathermap.org/data/2.5/weather?q=${city}&appid=${API_KEY}&units=metric`;
+                const res = await fetch(url);
+                const data = await res.json();
+                
+                // 데이터가 유효한지 확인 후 렌더링 (undefined 에러 방지)
+                if (data && data.main && data.main.temp !== undefined) {
+                    document.getElementById(elementId).innerText = `${Math.round(data.main.temp)}°`;
+                } else {
+                    document.getElementById(elementId).innerText = "N/A";
+                }
+            } catch (err) {
+                console.error(`Side city fetch error (${city}):`, err);
+                document.getElementById(elementId).innerText = "Err";
+            }
+        }
+    }
+
+    function searchWeather() {
+        const city = document.getElementById('cityInput').value;
+        if (city) fetchWeather(city);
+    }
+
+    function getLocationWeather() {
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(async (pos) => {
+                const { latitude, longitude } = pos.coords;
+                try {
+                    const url = `https://api.openweathermap.org/data/2.5/weather?lat=${latitude}&lon=${longitude}&appid=${API_KEY}&units=metric&lang=kr`;
+                    const res = await fetch(url);
+                    const data = await res.json();
+                    if (data && data.name) fetchWeather(data.name);
+                } catch (e) {
+                    console.error("Location Fetch Error", e);
+                }
+            }, (err) => {
+                alert("위치 정보를 가져오는데 실패했습니다.");
+            });
+        } else {
+            alert("위치 정보를 지원하지 않는 브라우저입니다.");
+        }
+    }
+
+    // 초기 실행
+    window.onload = () => {
+        updateDateTime();
+        setInterval(updateDateTime, 10000);
+        fetchWeather('Seoul'); // 기본값 서울
+        fetchSideCities();
+    };
+
+    // 엔터키 검색 지원
+    document.getElementById('cityInput').addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') searchWeather();
+    });
+</script>
+
+</body>
+</html>
