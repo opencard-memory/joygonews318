@@ -95,7 +95,6 @@
         .weather-display { display: flex; align-items: center; gap: 3px; font-weight: bold; }
         .weather-icon { width: 22px; height: 22px; }
 
-        /* 자동완성 포함 검색창 스타일 */
         .search-container { position: relative; }
         .search-box { position: relative; display: flex; align-items: center; }
         .search-input { 
@@ -207,7 +206,6 @@
                     <div id="realTimeDate" class="date-display">0000. 0. 0.</div>
                     <div id="weatherDisplay" class="weather-display">로딩 중..</div>
                 </div>
-                <!-- 자동완성 기능이 추가된 검색 컨테이너 -->
                 <div class="search-container" id="searchContainer">
                     <div class="search-box">
                         <input type="text" id="searchInput" class="search-input" placeholder="뉴스 검색..." autocomplete="off">
@@ -263,7 +261,7 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js";
         import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js";
-        import { getFirestore, collection, addDoc, getDocs, getDoc, doc, query, orderBy, serverTimestamp, onSnapshot, updateDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
+        import { getFirestore, collection, addDoc, getDocs, getDoc, doc, query, orderBy, serverTimestamp, onSnapshot, updateDoc, deleteDoc, increment } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyDOu8jfgNproVHenknRdsG-HPScyFMdO0k",
@@ -283,15 +281,13 @@
         let currentNewsId = null;
         let unsubscribeComments = null;
 
-        // --- 예상 독서 시간 계산 함수 ---
         function calculateReadTime(text) {
             if (!text) return 1;
-            const wordsPerMinute = 500; // 성인 평균 분당 읽기 속도 (한글 기준 약 500자)
+            const wordsPerMinute = 500;
             const minutes = Math.ceil(text.length / wordsPerMinute);
             return minutes;
         }
 
-        // --- 전역 함수 등록 ---
         window.login = () => signInWithPopup(auth, provider);
         window.showToast = (m) => {
             const t = document.getElementById('toast');
@@ -299,7 +295,6 @@
             setTimeout(()=>t.style.display='none', 2000);
         };
 
-        // --- 테마 설정 ---
         const themeToggle = document.getElementById('themeToggle');
         themeToggle.onclick = () => {
             const current = document.body.getAttribute('data-theme');
@@ -313,7 +308,6 @@
             themeToggle.innerText = '☀️ 라이트모드';
         }
 
-        // --- 뉴스 데이터 로드 ---
         window.loadNewsData = async (filterKeyword = "") => {
             const grid = document.getElementById('newsGrid');
             grid.innerHTML = '<p>뉴스를 불러오는 중입니다...</p>';
@@ -346,7 +340,10 @@
                 card.innerHTML = `
                     <div class="video-wrapper"><iframe src="https://www.youtube.com/embed/${news.youtubeId}?controls=0"></iframe></div>
                     <div class="news-info">
-                        <span class="read-time-badge">⏱️ 약 ${readTime}분 분량</span>
+                        <div style="display:flex; justify-content:space-between; align-items:center;">
+                            <span class="read-time-badge">⏱️ 약 ${readTime}분 분량</span>
+                            <span style="font-size:11px; color:var(--text-muted);">조회수 ${news.views || 0}회</span>
+                        </div>
                         <h3>${news.title}</h3>
                         <p>${news.content || ''}</p>
                     </div>
@@ -363,13 +360,24 @@
             const area = document.getElementById('detailArea');
             area.innerHTML = '상세 내용을 불러오는 중...';
             
-            const snap = await getDoc(doc(db, "news", id));
+            const newsRef = doc(db, "news", id);
+            
+            // 조회수 증가 처리 (세션당 1회 제한)
+            if (!sessionStorage.getItem(`viewed_${id}`)) {
+                try {
+                    await updateDoc(newsRef, { views: increment(1) });
+                    sessionStorage.setItem(`viewed_${id}`, 'true');
+                } catch(e) { console.error("조회수 업데이트 오류:", e); }
+            }
+
+            const snap = await getDoc(newsRef);
             if(snap.exists()) {
                 const data = snap.data();
                 const readTime = calculateReadTime(data.content || "");
+                const viewCount = data.views || 0;
                 area.innerHTML = `
                     <h1 style="font-size:28px; margin-top:20px; line-height:1.4;">${data.title}</h1>
-                    <p style="color:var(--text-muted); font-size:13px;">작성자: ${data.author || '익명'} | ${data.createdAt ? new Date(data.createdAt.seconds*1000).toLocaleString() : ''}</p>
+                    <p style="color:var(--text-muted); font-size:13px;">작성자: ${data.author || '익명'} | ${data.createdAt ? new Date(data.createdAt.seconds*1000).toLocaleString() : ''} | 조회수 ${viewCount}회</p>
                     <div class="detail-read-info">
                         ✨ <b>이 기사는 읽는 데 약 ${readTime}분 정도 소요됩니다.</b> 편안하게 감상해 보세요!
                     </div>
@@ -382,22 +390,17 @@
             }
         };
 
-        // --- 검색 자동완성 로직 ---
         const searchInput = document.getElementById('searchInput');
         const autocompleteList = document.getElementById('autocompleteList');
 
         searchInput.addEventListener('input', (e) => {
             const val = e.target.value.trim().toLowerCase();
             autocompleteList.innerHTML = '';
-            
             if (!val) {
                 autocompleteList.style.display = 'none';
                 return;
             }
-
-            // 뉴스 제목에서 필터링
             const matches = allNews.filter(n => n.title.toLowerCase().includes(val)).slice(0, 8);
-            
             if (matches.length > 0) {
                 matches.forEach(m => {
                     const item = document.createElement('div');
@@ -416,7 +419,6 @@
             }
         });
 
-        // 외부 클릭 시 닫기
         document.addEventListener('click', (e) => {
             if (!document.getElementById('searchContainer').contains(e.target)) {
                 autocompleteList.style.display = 'none';
@@ -433,7 +435,6 @@
             }
         };
 
-        // --- 댓글 & 답글 실시간 리스너 ---
         async function initComments(newsId) {
             if(unsubscribeComments) unsubscribeComments();
             const list = document.getElementById('commentList');
