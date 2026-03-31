@@ -71,12 +71,25 @@
         }
 
         @keyframes marquee {
-            0% { transform: translateX(0); }
+            0 { transform: translateX(0); }
             100% { transform: translateX(-200%); }
         }
 
         .header-tools { display: flex; align-items: center; gap: 15px; }
-        .info-panel { display: flex; flex-direction: column; align-items: flex-end; font-size: 11px; color: var(--text-muted); }
+        
+        /* 정보 패널 스타일 수정 */
+        .info-panel { 
+            display: flex; 
+            align-items: center; 
+            gap: 15px; 
+            font-size: 12px; 
+            color: var(--text-muted); 
+            background: var(--bg-page);
+            padding: 5px 15px;
+            border-radius: 10px;
+        }
+        .time-display { font-weight: 900; color: var(--joygo-blue); min-width: 70px; }
+        .date-display { font-weight: 500; }
         .weather-display { display: flex; align-items: center; gap: 3px; font-weight: bold; }
         .weather-icon { width: 22px; height: 22px; }
 
@@ -143,6 +156,9 @@
 
         #toast { position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%); background: #333; color: #fff; padding: 10px 25px; border-radius: 25px; z-index: 3000; display: none; }
 
+        @media (max-width: 1100px) {
+            .info-panel { display: none; }
+        }
         @media (max-width: 900px) {
             .header-main { flex-wrap: wrap; }
             .breaking-news { order: 3; max-width: 100%; width: 100%; margin-top: 10px; }
@@ -170,7 +186,8 @@
 
             <div class="header-tools">
                 <div class="info-panel">
-                    <div id="realTimeDate"></div>
+                    <div id="realTimeClock" class="time-display">00:00:00</div>
+                    <div id="realTimeDate" class="date-display">0000. 0. 0.</div>
                     <div id="weatherDisplay" class="weather-display">로딩 중..</div>
                 </div>
                 <div class="search-box">
@@ -321,7 +338,7 @@
                     <h1 style="font-size:28px; margin-top:20px; line-height:1.4;">${data.title}</h1>
                     <p style="color:var(--text-muted); font-size:13px;">작성자: ${data.author || '익명'} | ${data.createdAt ? new Date(data.createdAt.seconds*1000).toLocaleString() : ''}</p>
                     <div class="detail-video">
-                        <iframe width="100%" height="100%" src="https://www.youtube.com/embed/${data.youtubeId}?autoplay=1" frameborder="0" allow="autoplay; encrypted-media" allowfullscreen></iframe>
+                        <iframe width="100%" height="100%" src="https://www.youtube.com/embed/${data.youtubeId}" frameborder="0" allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
                     </div>
                     <div class="detail-content">${data.content}</div>
                 `;
@@ -413,7 +430,6 @@
             const text = input.value.trim();
             if(!text) return;
             try {
-                // 상위 경로(news/{newsId}/comments/{commentId}/replies)
                 await addDoc(collection(db, "news", currentNewsId, "comments", commentId, "replies"), {
                     text: text, uid: auth.currentUser.uid, userName: auth.currentUser.displayName, createdAt: serverTimestamp()
                 });
@@ -422,7 +438,7 @@
                 window.showToast("답글이 등록되었습니다.");
             } catch(e) {
                 console.error(e);
-                window.showToast("답글 등록 실패 (권한 확인)");
+                window.showToast("답글 등록 실패");
             }
         };
 
@@ -512,13 +528,25 @@
     </script>
 
     <script>
-        function initInfo() {
+        // --- 실시간 시계, 날짜, 날씨 관리 ---
+        function updateClock() {
+            const clockEl = document.getElementById('realTimeClock');
             const dateEl = document.getElementById('realTimeDate');
+            if (!clockEl || !dateEl) return;
+
             const now = new Date();
+            
+            // 시:분:초 포맷팅
+            const h = String(now.getHours()).padStart(2, '0');
+            const m = String(now.getMinutes()).padStart(2, '0');
+            const s = String(now.getSeconds()).padStart(2, '0');
+            clockEl.innerText = `${h}:${m}:${s}`;
+
+            // 날짜 포맷팅
             const days = ['일', '월', '화', '수', '목', '금', '토'];
             dateEl.innerText = `${now.getFullYear()}. ${now.getMonth() + 1}. ${now.getDate()}. (${days[now.getDay()]})`;
-            getWeather();
         }
+
         async function getWeather() {
             const API_KEY = 'f9588dfba7000b48e2a636ba0ded59c5';
             const weatherEl = document.getElementById('weatherDisplay');
@@ -526,9 +554,20 @@
                 const res = await fetch(`https://api.openweathermap.org/data/2.5/weather?q=Seoul&appid=${API_KEY}&units=metric&lang=kr`);
                 const data = await res.json();
                 weatherEl.innerHTML = `<img src="https://openweathermap.org/img/wn/${data.weather[0].icon}.png" class="weather-icon"> <span>${Math.round(data.main.temp)}°C 서울</span>`;
-            } catch (e) { weatherEl.innerText = "날씨 정보 없음"; }
+            } catch (e) { 
+                if(weatherEl) weatherEl.innerText = "날씨 정보 없음"; 
+            }
         }
-        window.addEventListener('load', initInfo);
+
+        window.addEventListener('load', () => {
+            // 초기 실행
+            updateClock();
+            getWeather();
+            // 1초마다 시계 업데이트
+            setInterval(updateClock, 1000);
+            // 30분마다 날씨 업데이트
+            setInterval(getWeather, 1800000);
+        });
     </script>
 </body>
 </html>
