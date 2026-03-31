@@ -133,23 +133,16 @@
         .comment-text { font-size: 15px; color: #444; word-break: break-all; }
         .comment-date { font-size: 12px; color: #999; margin-top: 5px; }
 
-        /* 댓글 액션 버튼들 */
         .comment-actions { display: flex; gap: 15px; margin-top: 10px; align-items: center; }
         .action-btn { background: none; border: none; font-size: 12px; color: #777; cursor: pointer; display: flex; align-items: center; gap: 4px; padding: 0; }
         .action-btn:hover { text-decoration: underline; }
         .action-btn.like:hover { color: var(--like-red); }
         .action-btn.dislike:hover { color: var(--dislike-blue); }
-        .action-btn.report:hover { color: #f39c12; }
-        .action-btn.edit:hover, .action-btn.delete:hover { color: var(--joygo-blue); }
 
-        /* 대댓글 스타일 */
+        /* 대댓글/수정 폼 */
         .reply-list { margin-left: 55px; margin-top: 15px; border-left: 2px solid #eee; padding-left: 15px; display: flex; flex-direction: column; gap: 15px; }
-        .reply-form { margin-left: 55px; margin-top: 10px; display: none; }
-        .reply-form.active { display: block; }
-
-        /* 수정 폼 스타일 */
-        .edit-form { display: none; margin-top: 10px; }
-        .edit-form.active { display: block; }
+        .reply-form, .edit-form { display: none; margin-top: 10px; }
+        .active { display: block !important; }
 
         #toast { position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.8); color: #fff; padding: 12px 24px; border-radius: 50px; z-index: 2000; display: none; }
 
@@ -166,7 +159,7 @@
 
     <header>
         <div class="header-main">
-            <div class="logo" onclick="showListView()">
+            <div class="logo" onclick="location.hash = '#'">
                 <img src="https://i.postimg.cc/PrK5Ysh4/joygo-logo-qenyzfo8a6cul319bqetl2et0yfhgwizrrfan2szcw.png" alt="JoyGO News Logo">
             </div>
             <div class="header-tools">
@@ -181,7 +174,7 @@
         </div>
         <nav>
             <ul>
-                <li><a onclick="showListView()" id="navHome" class="active">홈</a></li>
+                <li><a onclick="location.hash = '#'" id="navHome" class="active">홈</a></li>
                 <li><a href="https://www.joygonews.uk/jebo" target="_blank">제보</a></li>
                 <li><a href="https://www.joygonews.uk/weather" target="_blank">날씨</a></li>
             </ul>
@@ -199,7 +192,7 @@
 
         <!-- 뉴스 상세 화면 -->
         <section id="detailView">
-            <button class="back-btn" onclick="showListView()">← 목록으로</button>
+            <button class="back-btn" onclick="location.hash = '#'">← 목록으로</button>
             <div id="detailContentArea"></div>
             
             <div class="comment-section">
@@ -220,6 +213,7 @@
         import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js";
         import { getFirestore, collection, addDoc, getDocs, getDoc, doc, query, orderBy, serverTimestamp, onSnapshot, updateDoc, deleteDoc, increment } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
 
+        // Firebase 설정
         const firebaseConfig = {
             apiKey: "AIzaSyDOu8jfgNproVHenknRdsG-HPScyFMdO0k",
             authDomain: "joygonews318.firebaseapp.com",
@@ -237,15 +231,19 @@
         let currentNewsId = null;
         let unsubscribeComments = null;
 
-        // 화면 전환 함수
+        // 화면 제어 함수 (리스트 보여주기)
         window.showListView = () => {
             document.getElementById('listView').style.display = 'block';
             document.getElementById('detailView').style.display = 'none';
             document.getElementById('navHome').classList.add('active');
             currentNewsId = null;
-            if (unsubscribeComments) unsubscribeComments();
+            if (unsubscribeComments) {
+                unsubscribeComments();
+                unsubscribeComments = null;
+            }
         };
 
+        // 화면 제어 함수 (상세페이지 보여주기)
         window.showDetailView = async (newsId) => {
             document.getElementById('listView').style.display = 'none';
             document.getElementById('detailView').style.display = 'block';
@@ -277,13 +275,15 @@
                         <div class="detail-content">${data.content}</div>
                     `;
                     loadComments(newsId);
+                } else {
+                    detailArea.innerHTML = '<p style="text-align:center; padding:50px;">존재하지 않는 뉴스입니다.</p>';
                 }
             } catch (e) {
-                detailArea.innerHTML = '<p>데이터를 불러오는 중 오류가 발생했습니다.</p>';
+                detailArea.innerHTML = '<p style="text-align:center; padding:50px;">데이터를 불러오는 중 오류가 발생했습니다.</p>';
             }
         };
 
-        // 뉴스 로드
+        // 뉴스 목록 가져오기
         window.loadNews = async () => {
             const newsGrid = document.getElementById('newsGrid');
             try {
@@ -302,7 +302,9 @@
                     
                     const item = document.createElement('article');
                     item.className = 'news-item';
-                    item.onclick = () => window.showDetailView(doc.id);
+                    // 클릭 시 해시(Hash) 변경 -> 라우터가 감지하여 상세페이지 이동
+                    item.onclick = () => { location.hash = `#/news/${doc.id}`; };
+                    
                     item.innerHTML = `
                         <div class="video-wrapper">
                             <iframe src="https://www.youtube.com/embed/${data.youtubeId}?controls=0" frameborder="0"></iframe>
@@ -318,17 +320,18 @@
                     newsGrid.appendChild(item);
                 });
             } catch (e) {
-                console.error(e);
+                console.error("뉴스 로드 실패:", e);
             }
         };
 
-        // 실시간 댓글 및 대댓글 로드
+        // 댓글 로직 (실시간 감시)
         const loadComments = (newsId) => {
             const commentList = document.getElementById('commentList');
             const commentCount = document.getElementById('commentCount');
+            const q = query(collection(db, "news", newsId, "comments"), orderBy("createdAt", "asc"));
             
-            const q = query(collection(db, "news", newsId, "comments"), orderBy("createdAt", "asc")); // 오래된 순으로 정렬해야 대댓글 흐름이 자연스러움
-            
+            if (unsubscribeComments) unsubscribeComments();
+
             unsubscribeComments = onSnapshot(q, (snapshot) => {
                 commentCount.innerText = snapshot.size;
                 commentList.innerHTML = '';
@@ -345,22 +348,21 @@
                     const data = { id: doc.id, ...doc.data(), replies: [] };
                     commentsMap[doc.id] = data;
                     if (data.parentId) {
-                        if (commentsMap[data.parentId]) {
-                            commentsMap[data.parentId].replies.push(data);
-                        }
+                        if (commentsMap[data.parentId]) commentsMap[data.parentId].replies.push(data);
                     } else {
                         topLevelComments.push(data);
                     }
                 });
 
-                // 상단 댓글부터 렌더링 (최근 순으로 보여주기 위해 뒤집기)
                 topLevelComments.reverse().forEach(comment => {
                     renderCommentItem(comment, commentList, false);
                 });
+            }, (error) => {
+                console.error("댓글 로드 실패:", error);
             });
         };
 
-        // 댓글 아이템 렌더링 함수
+        // 댓글 아이템 생성
         function renderCommentItem(comment, container, isReply) {
             const date = comment.createdAt ? new Date(comment.createdAt.seconds * 1000).toLocaleString() : '방금 전';
             const isMyComment = auth.currentUser && auth.currentUser.uid === comment.uid;
@@ -376,8 +378,6 @@
                             ${isMyComment ? '<span style="font-size:10px; color:var(--joygo-blue); background:#eef0ff; padding:2px 6px; border-radius:10px;">내 댓글</span>' : ''}
                         </div>
                         <div id="text-${comment.id}" class="comment-text">${comment.text}</div>
-                        
-                        <!-- 수정 폼 -->
                         <div id="edit-form-${comment.id}" class="edit-form">
                             <textarea id="edit-input-${comment.id}" class="comment-input" rows="2">${comment.text}</textarea>
                             <div style="text-align:right; margin-top:5px;">
@@ -385,18 +385,15 @@
                                 <button onclick="window.updateComment('${comment.id}')" style="background:var(--joygo-blue); color:white; border:none; padding:5px 10px; border-radius:4px; cursor:pointer;">수정완료</button>
                             </div>
                         </div>
-
                         <div class="comment-date">${date}</div>
                         <div class="comment-actions">
                             <button class="action-btn like" onclick="window.handleReaction('${comment.id}', 'likes')">👍 ${comment.likes || 0}</button>
                             <button class="action-btn dislike" onclick="window.handleReaction('${comment.id}', 'dislikes')">👎 ${comment.dislikes || 0}</button>
                             ${!isReply ? `<button class="action-btn" onclick="window.toggleReplyForm('${comment.id}')">답글</button>` : ''}
                             ${isMyComment ? `
-                                <button class="action-btn edit" onclick="window.toggleEditForm('${comment.id}')">수정</button>
-                                <button class="action-btn delete" onclick="window.deleteComment('${comment.id}')">삭제</button>
-                            ` : `
-                                <button class="action-btn report" onclick="window.reportComment('${comment.id}')">신고</button>
-                            `}
+                                <button class="action-btn" style="color:blue" onclick="window.toggleEditForm('${comment.id}')">수정</button>
+                                <button class="action-btn" style="color:red" onclick="window.deleteComment('${comment.id}')">삭제</button>
+                            ` : `<button class="action-btn" onclick="window.reportComment('${comment.id}')">신고</button>`}
                         </div>
                     </div>
                 </div>
@@ -412,46 +409,31 @@
             `;
             container.appendChild(itemDiv);
 
-            // 대댓글이 있는 경우 재귀 호출
             if (comment.replies && comment.replies.length > 0) {
                 const replyContainer = itemDiv.querySelector(`#replies-${comment.id}`);
-                comment.replies.forEach(reply => {
-                    renderCommentItem(reply, replyContainer, true);
-                });
+                comment.replies.forEach(reply => renderCommentItem(reply, replyContainer, true));
             }
         }
 
-        // --- 기능 함수들 ---
-
-        // 댓글 등록 (parentId가 있으면 대댓글)
+        // --- 기능 전역 등록 ---
         window.submitComment = async (parentId = null) => {
-            if (!auth.currentUser) return showToast("로그인 후 이용 가능합니다.");
-            
+            if (!auth.currentUser) return window.showToast("로그인 후 이용 가능합니다.");
             const inputId = parentId ? `reply-input-${parentId}` : 'commentInput';
             const input = document.getElementById(inputId);
             const text = input.value.trim();
             if (!text) return;
-
             try {
                 await addDoc(collection(db, "news", currentNewsId, "comments"), {
-                    text: text,
-                    uid: auth.currentUser.uid,
-                    userName: auth.currentUser.displayName,
-                    userPhoto: auth.currentUser.photoURL,
-                    createdAt: serverTimestamp(),
-                    parentId: parentId,
-                    likes: 0,
-                    dislikes: 0
+                    text, uid: auth.currentUser.uid, userName: auth.currentUser.displayName,
+                    userPhoto: auth.currentUser.photoURL, createdAt: serverTimestamp(),
+                    parentId, likes: 0, dislikes: 0
                 });
                 input.value = '';
                 if (parentId) document.getElementById(`reply-form-${parentId}`).classList.remove('active');
-                showToast(parentId ? "답글이 등록되었습니다." : "댓글이 등록되었습니다.");
-            } catch (e) {
-                showToast("등록 실패");
-            }
+                window.showToast("등록되었습니다.");
+            } catch (e) { window.showToast("등록 실패"); }
         };
 
-        // 수정 폼 토글
         window.toggleEditForm = (id) => {
             document.getElementById(`text-${id}`).style.display = 'none';
             document.getElementById(`edit-form-${id}`).classList.add('active');
@@ -462,74 +444,62 @@
             document.getElementById(`edit-form-${id}`).classList.remove('active');
         };
 
-        // 댓글 수정
         window.updateComment = async (id) => {
             const text = document.getElementById(`edit-input-${id}`).value.trim();
             if (!text) return;
             try {
-                await updateDoc(doc(db, "news", currentNewsId, "comments", id), {
-                    text: text,
-                    updatedAt: serverTimestamp()
-                });
-                showToast("수정되었습니다.");
-            } catch (e) {
-                showToast("수정 실패");
-            }
+                await updateDoc(doc(db, "news", currentNewsId, "comments", id), { text, updatedAt: serverTimestamp() });
+                window.showToast("수정되었습니다.");
+            } catch (e) { window.showToast("수정 실패"); }
         };
 
-        // 댓글 삭제
         window.deleteComment = async (id) => {
             if (!confirm("정말 삭제하시겠습니까?")) return;
             try {
                 await deleteDoc(doc(db, "news", currentNewsId, "comments", id));
-                showToast("삭제되었습니다.");
-            } catch (e) {
-                showToast("삭제 실패");
-            }
+                window.showToast("삭제되었습니다.");
+            } catch (e) { window.showToast("삭제 실패"); }
         };
 
-        // 대댓글 폼 토글
         window.toggleReplyForm = (id) => {
-            if (!auth.currentUser) return showToast("로그인 후 이용 가능합니다.");
-            const form = document.getElementById(`reply-form-${id}`);
-            form.classList.toggle('active');
-            if (form.classList.contains('active')) {
-                document.getElementById(`reply-input-${id}`).focus();
-            }
+            if (!auth.currentUser) return window.showToast("로그인 후 이용 가능합니다.");
+            document.getElementById(`reply-form-${id}`).classList.toggle('active');
         };
 
-        // 좋아요/싫어요 핸들러
         window.handleReaction = async (id, type) => {
-            if (!auth.currentUser) return showToast("로그인 후 참여 가능합니다.");
-            
-            // 단순화를 위해 세션 스토리지에 반응 여부 저장 (새로고침 전까지 유지)
-            const storageKey = `reacted_${id}_${auth.currentUser.uid}`;
-            if (sessionStorage.getItem(storageKey)) {
-                return showToast("이미 참여하셨습니다.");
-            }
-
+            if (!auth.currentUser) return window.showToast("로그인 후 참여 가능합니다.");
+            const key = `re_${id}_${auth.currentUser.uid}`;
+            if (sessionStorage.getItem(key)) return window.showToast("이미 참여하셨습니다.");
             try {
-                const commentRef = doc(db, "news", currentNewsId, "comments", id);
-                await updateDoc(commentRef, {
-                    [type]: increment(1)
-                });
-                sessionStorage.setItem(storageKey, 'true');
-                showToast(type === 'likes' ? "좋아요를 눌렀습니다." : "싫어요를 눌렀습니다.");
-            } catch (e) {
-                showToast("처리 중 오류 발생");
-            }
+                await updateDoc(doc(db, "news", currentNewsId, "comments", id), { [type]: increment(1) });
+                sessionStorage.setItem(key, 'true');
+                window.showToast("참여 완료");
+            } catch (e) { window.showToast("오류 발생"); }
         };
 
-        // 신고 기능
         window.reportComment = (id) => {
-            if (!auth.currentUser) return showToast("로그인 후 신고가 가능합니다.");
-            if (confirm("이 댓글을 신고하시겠습니까? 운영진이 검토 후 조치합니다.")) {
-                showToast("신고가 접수되었습니다. 감사합니다.");
-                // 실제 운영 시에는 'reports' 컬렉션에 추가하는 로직을 넣을 수 있습니다.
-            }
+            if (!auth.currentUser) return window.showToast("로그인 후 신고 가능합니다.");
+            if (confirm("이 댓글을 신고하시겠습니까?")) window.showToast("신고 접수되었습니다.");
         };
 
-        // 인증 처리
+        // --- 라우팅 시스템 (핵심!) ---
+        function handleRouting() {
+            const hash = window.location.hash;
+            if (hash.startsWith('#/news/')) {
+                const newsId = hash.replace('#/news/', '');
+                window.showDetailView(newsId);
+            } else {
+                window.showListView();
+            }
+        }
+
+        window.addEventListener('hashchange', handleRouting);
+        window.addEventListener('DOMContentLoaded', () => {
+            handleRouting();
+            window.loadNews();
+        });
+
+        // 인증 상태 감시
         onAuthStateChanged(auth, (user) => {
             const authContainer = document.getElementById('authContainer');
             if (user) {
@@ -547,11 +517,10 @@
                 document.getElementById('loginBtn').onclick = () => signInWithPopup(auth, provider);
             }
         });
-
-        window.loadNews();
     </script>
 
     <script>
+        // 날씨 및 시간 스크립트
         function initDate() {
             const dateEl = document.getElementById('realTimeDate');
             const now = new Date();
@@ -569,7 +538,7 @@
             } catch (e) { weatherEl.innerText = "날씨 정보 없음"; }
         }
 
-        function showToast(msg) {
+        window.showToast = (msg) => {
             const toast = document.getElementById('toast');
             toast.innerText = msg;
             toast.style.display = 'block';
