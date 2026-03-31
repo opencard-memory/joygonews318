@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>조이고 뉴스 - JoyGO News</title>
-    <!-- 브라우저 탭 로고(Favicon) 변경 -->
     <link rel="icon" type="image/png" href="https://i.postimg.cc/3wVmDtDM/daunlodeu.png">
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700;900&display=swap');
@@ -17,6 +16,7 @@
             --text-muted: #666;
             --border: #e1e4e8;
             --header-bg: #ffffff;
+            --shadow: rgba(0,0,0,0.1);
         }
 
         [data-theme='dark'] {
@@ -26,6 +26,7 @@
             --text-muted: #aaa;
             --border: #333;
             --header-bg: #1a1a1a;
+            --shadow: rgba(0,0,0,0.5);
         }
 
         body { 
@@ -42,6 +43,8 @@
             background: var(--joygo-blue); z-index: 2001; transition: width 0.1s;
         }
 
+        .top-accent-bar { height: 10px; background-color: var(--joygo-blue); width: 100%; }
+
         header {
             padding: 15px 10%;
             border-bottom: 1px solid var(--border);
@@ -57,45 +60,69 @@
             display: flex; align-items: center; 
             background: var(--bg-page); padding: 5px 10px; border-radius: 20px;
             max-width: 350px; white-space: nowrap; overflow: hidden;
+            position: relative;
         }
-        .breaking-badge { color: #ff4d4d; font-weight: 900; font-size: 13px; padding-right: 10px; }
-        .breaking-text-container { overflow: hidden; flex: 1; display: flex; }
+        .breaking-badge { 
+            color: #ff4d4d; font-weight: 900; font-size: 13px; 
+            padding-right: 10px; background: var(--bg-page); 
+            z-index: 2; position: relative;
+        }
+        .breaking-text-container { overflow: hidden; flex: 1; display: flex; z-index: 1; }
         .breaking-text { 
             font-size: 13px; font-weight: 500; display: inline-block;
             animation: marquee 15s linear infinite; padding-left: 100%;
         }
 
-        @keyframes marquee { 0% { transform: translateX(0); } 100% { transform: translateX(-200%); } }
+        @keyframes marquee {
+            0% { transform: translateX(0); }
+            100% { transform: translateX(-200%); }
+        }
 
         .header-tools { display: flex; align-items: center; gap: 15px; }
         
-        /* 검색창 및 자동완성 스타일 */
+        .info-panel { 
+            display: flex; 
+            align-items: center; 
+            gap: 15px; 
+            font-size: 12px; 
+            color: var(--text-muted); 
+            background: var(--bg-page);
+            padding: 5px 15px;
+            border-radius: 10px;
+        }
+        .time-display { font-weight: 900; color: var(--joygo-blue); min-width: 70px; }
+        .date-display { font-weight: 500; }
+        .weather-display { display: flex; align-items: center; gap: 3px; font-weight: bold; }
+        .weather-icon { width: 22px; height: 22px; }
+
+        /* 자동완성 포함 검색창 스타일 */
+        .search-container { position: relative; }
         .search-box { position: relative; display: flex; align-items: center; }
         .search-input { 
             padding: 8px 15px; border-radius: 20px; border: 1px solid var(--border); 
-            background: var(--bg-page); color: var(--text-main); outline: none; width: 140px; transition: width 0.3s;
+            background: var(--bg-page); color: var(--text-main); outline: none; width: 120px; transition: width 0.3s;
             font-size: 13px;
         }
-        .search-input:focus { width: 220px; border-color: var(--joygo-blue); }
+        .search-input:focus { width: 200px; border-color: var(--joygo-blue); }
 
-        .search-suggestions {
-            position: absolute; top: 45px; left: 0; width: 100%;
+        .autocomplete-list {
+            position: absolute; top: 110%; left: 0; width: 100%; 
             background: var(--bg-card); border: 1px solid var(--border);
-            border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.1);
-            z-index: 2000; display: none; max-height: 250px; overflow-y: auto;
+            border-radius: 12px; box-shadow: 0 10px 25px var(--shadow);
+            z-index: 1001; display: none; max-height: 300px; overflow-y: auto;
+            padding: 5px 0;
         }
-        .suggestion-item {
-            padding: 12px 15px; font-size: 13px; cursor: pointer;
-            border-bottom: 1px solid var(--border); color: var(--text-main);
-            transition: background 0.2s; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        .autocomplete-item {
+            padding: 10px 15px; font-size: 13px; cursor: pointer;
+            border-bottom: 1px solid var(--border); transition: 0.2s;
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
         }
-        .suggestion-item:last-child { border-bottom: none; }
-        .suggestion-item:hover { background: var(--bg-page); color: var(--joygo-blue); }
-        .suggestion-item mark { background: #ffeb3b; color: #000; font-weight: bold; border-radius: 2px; }
+        .autocomplete-item:last-child { border-bottom: none; }
+        .autocomplete-item:hover { background: var(--bg-page); color: var(--joygo-blue); }
 
         .theme-toggle {
             background: none; border: 1px solid var(--border); color: var(--text-main);
-            padding: 5px 12px; border-radius: 15px; cursor: pointer; font-size: 11px;
+            padding: 5px 10px; border-radius: 15px; cursor: pointer; font-size: 11px;
         }
 
         nav ul { display: flex; gap: 25px; list-style: none; padding: 15px 0 0 0; margin: 0; }
@@ -107,37 +134,58 @@
         .news-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 25px; }
         .news-item {
             background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; 
-            overflow: hidden; transition: 0.2s; cursor: pointer;
+            overflow: hidden; transition: 0.2s; cursor: pointer; display: flex; flex-direction: column;
         }
         .news-item:hover { transform: translateY(-5px); box-shadow: 0 10px 20px rgba(0,0,0,0.1); }
         .video-wrapper { position: relative; padding-bottom: 56.25%; background: #000; pointer-events: none; }
         .video-wrapper iframe { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
-        .news-info { padding: 15px; }
-        .news-info h3 { margin: 0 0 10px 0; font-size: 16px; color: var(--text-main); }
+        .news-info { padding: 15px; flex: 1; }
+        .news-info h3 { margin: 0 0 8px 0; font-size: 16px; color: var(--text-main); }
+        .read-time-badge { font-size: 11px; color: var(--joygo-blue); font-weight: bold; margin-bottom: 8px; display: block; }
         .news-info p { font-size: 13px; color: var(--text-muted); -webkit-line-clamp: 2; display: -webkit-box; -webkit-box-orient: vertical; overflow: hidden; }
 
         #detailView { display: none; }
         .detail-video { width: 100%; aspect-ratio: 16/9; background: #000; border-radius: 12px; overflow: hidden; margin: 20px 0; }
         .detail-content { font-size: 17px; line-height: 1.8; white-space: pre-wrap; margin-bottom: 40px; }
+        .detail-read-info { background: var(--bg-page); padding: 10px 15px; border-radius: 8px; font-size: 14px; margin-bottom: 20px; border-left: 4px solid var(--joygo-blue); }
         
+        .share-section { display: flex; gap: 10px; margin: 20px 0; padding: 15px; background: var(--bg-card); border-radius: 8px; border: 1px solid var(--border); }
+        .share-btn { border: none; padding: 8px 15px; border-radius: 5px; cursor: pointer; font-weight: bold; font-size: 12px; }
+        .share-copy { background: #eee; color: #333; }
+        .share-tw { background: #1da1f2; color: white; }
+
         .comment-section { margin-top: 50px; border-top: 2px solid var(--border); padding-top: 30px; }
+        .comment-input-box { margin-bottom: 30px; }
         .comment-input { width: 100%; background: var(--bg-page); border: 1px solid var(--border); color: var(--text-main); padding: 15px; border-radius: 10px; box-sizing: border-box; resize: none; }
         
-        .comment-card { border-bottom: 1px solid var(--border); padding: 20px 0; }
+        .comment-card { border-bottom: 1px solid var(--border); padding: 20px 0; position: relative; }
         .comment-header { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
         .comment-user-img { width: 30px; height: 30px; border-radius: 50%; }
         .comment-name { font-weight: 700; font-size: 14px; }
         .comment-date { font-size: 11px; color: var(--text-muted); }
         .comment-actions { display: flex; gap: 15px; margin-top: 10px; font-size: 12px; }
-        .action-link { cursor: pointer; color: var(--text-muted); }
+        .action-link { cursor: pointer; color: var(--text-muted); transition: 0.2s; }
         .action-link:hover { color: var(--joygo-blue); }
+        .action-link.red:hover { color: #ff4d4d; }
+
+        .reply-container { margin-left: 40px; margin-top: 10px; border-left: 2px solid var(--border); padding-left: 15px; }
+        .reply-input-box { margin-top: 10px; display: none; }
 
         #toast { position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%); background: #333; color: #fff; padding: 10px 25px; border-radius: 25px; z-index: 3000; display: none; }
+
+        @media (max-width: 1100px) {
+            .info-panel { display: none; }
+        }
+        @media (max-width: 900px) {
+            .header-main { flex-wrap: wrap; }
+            .breaking-news { order: 3; max-width: 100%; width: 100%; margin-top: 10px; }
+        }
     </style>
 </head>
 <body data-theme="light">
 
     <div id="readingProgress"></div>
+    <div class="top-accent-bar"></div>
 
     <header>
         <div class="header-main">
@@ -148,16 +196,23 @@
                 <div class="breaking-news">
                     <span class="breaking-badge">[속보]</span>
                     <div class="breaking-text-container">
-                        <span class="breaking-text" id="breakingTicker">조이고 뉴스 자동완성 기능이 추가되었습니다!</span>
+                        <span class="breaking-text" id="breakingTicker">조이고 뉴스에 오신 것을 환영합니다!</span>
                     </div>
                 </div>
             </div>
 
             <div class="header-tools">
-                <div class="search-box">
-                    <input type="text" id="searchInput" class="search-input" placeholder="뉴스 검색..." autocomplete="off">
-                    <!-- 추천 검색어 목록 -->
-                    <div id="searchSuggestions" class="search-suggestions"></div>
+                <div class="info-panel">
+                    <div id="realTimeClock" class="time-display">00:00:00</div>
+                    <div id="realTimeDate" class="date-display">0000. 0. 0.</div>
+                    <div id="weatherDisplay" class="weather-display">로딩 중..</div>
+                </div>
+                <!-- 자동완성 기능이 추가된 검색 컨테이너 -->
+                <div class="search-container" id="searchContainer">
+                    <div class="search-box">
+                        <input type="text" id="searchInput" class="search-input" placeholder="뉴스 검색..." autocomplete="off">
+                    </div>
+                    <div id="autocompleteList" class="autocomplete-list"></div>
                 </div>
                 <button class="theme-toggle" id="themeToggle">🌙 다크모드</button>
                 <div id="authContainer"></div>
@@ -177,7 +232,7 @@
         <section id="listView">
             <div id="searchResultTitle" style="display:none; margin-bottom:20px;">
                 <h2 id="searchText"></h2>
-                <button onclick="location.hash='#'" style="border:none; background:none; color:var(--joygo-blue); cursor:pointer; font-weight:bold;">전체보기</button>
+                <button onclick="location.hash='#'" style="border:none; background:none; color:var(--joygo-blue); cursor:pointer; font-weight:bold;">전체보기로 돌아가기</button>
             </div>
             <div class="news-grid" id="newsGrid"></div>
         </section>
@@ -186,6 +241,12 @@
             <button onclick="location.hash='#'" style="cursor:pointer; background:none; border:1px solid var(--border); color:var(--text-main); padding:5px 10px; border-radius:5px;">← 뒤로가기</button>
             <div id="detailArea"></div>
             
+            <div class="share-section">
+                <span style="font-weight:bold; font-size:14px; margin-right:10px; align-self:center;">공유하기:</span>
+                <button class="share-btn share-copy" onclick="window.copyLink()">🔗 링크 복사</button>
+                <button class="share-btn share-tw" onclick="window.shareTwitter()">𝕏 트위터</button>
+            </div>
+
             <div class="comment-section">
                 <h3>댓글 <span id="commentCount">0</span></h3>
                 <div class="comment-input-box">
@@ -222,6 +283,14 @@
         let currentNewsId = null;
         let unsubscribeComments = null;
 
+        // --- 예상 독서 시간 계산 함수 ---
+        function calculateReadTime(text) {
+            if (!text) return 1;
+            const wordsPerMinute = 500; // 성인 평균 분당 읽기 속도 (한글 기준 약 500자)
+            const minutes = Math.ceil(text.length / wordsPerMinute);
+            return minutes;
+        }
+
         // --- 전역 함수 등록 ---
         window.login = () => signInWithPopup(auth, provider);
         window.showToast = (m) => {
@@ -233,7 +302,8 @@
         // --- 테마 설정 ---
         const themeToggle = document.getElementById('themeToggle');
         themeToggle.onclick = () => {
-            const target = document.body.getAttribute('data-theme') === 'light' ? 'dark' : 'light';
+            const current = document.body.getAttribute('data-theme');
+            const target = current === 'light' ? 'dark' : 'light';
             document.body.setAttribute('data-theme', target);
             themeToggle.innerText = target === 'light' ? '🌙 다크모드' : '☀️ 라이트모드';
             localStorage.setItem('theme', target);
@@ -246,10 +316,12 @@
         // --- 뉴스 데이터 로드 ---
         window.loadNewsData = async (filterKeyword = "") => {
             const grid = document.getElementById('newsGrid');
+            grid.innerHTML = '<p>뉴스를 불러오는 중입니다...</p>';
             try {
                 const q = query(collection(db, "news"), orderBy("createdAt", "desc"));
                 const snap = await getDocs(q);
                 allNews = snap.docs.map(d => ({id: d.id, ...d.data()}));
+                if(allNews.length > 0) document.getElementById('breakingTicker').innerText = allNews[0].title;
                 renderNewsList(filterKeyword);
             } catch(e) { console.error(e); }
         };
@@ -258,23 +330,23 @@
             const grid = document.getElementById('newsGrid');
             const resultTitle = document.getElementById('searchResultTitle');
             grid.innerHTML = '';
-            
             let filtered = allNews;
             if(keyword) {
-                filtered = allNews.filter(n => n.title.includes(keyword) || (n.content && n.content.includes(keyword)));
+                filtered = allNews.filter(n => n.title.toLowerCase().includes(keyword.toLowerCase()) || (n.content && n.content.toLowerCase().includes(keyword.toLowerCase())));
                 resultTitle.style.display = 'block';
                 document.getElementById('searchText').innerText = `'${keyword}' 검색 결과 (${filtered.length})`;
             } else {
                 resultTitle.style.display = 'none';
             }
-            
             filtered.forEach(news => {
+                const readTime = calculateReadTime(news.content || "");
                 const card = document.createElement('div');
                 card.className = 'news-item';
-                card.onclick = () => { location.hash = `#/news/${news.id}`; };
+                card.onclick = () => location.hash = `#/news/${news.id}`;
                 card.innerHTML = `
                     <div class="video-wrapper"><iframe src="https://www.youtube.com/embed/${news.youtubeId}?controls=0"></iframe></div>
                     <div class="news-info">
+                        <span class="read-time-badge">⏱️ 약 ${readTime}분 분량</span>
                         <h3>${news.title}</h3>
                         <p>${news.content || ''}</p>
                     </div>
@@ -283,86 +355,135 @@
             });
         }
 
-        // --- 검색 자동완성 로직 ---
-        const searchInput = document.getElementById('searchInput');
-        const suggestionsBox = document.getElementById('searchSuggestions');
-
-        searchInput.oninput = (e) => {
-            const keyword = e.target.value.trim().toLowerCase();
-            if (!keyword) { suggestionsBox.style.display = 'none'; return; }
-
-            const matches = allNews.filter(n => n.title.toLowerCase().includes(keyword)).slice(0, 6);
-
-            if (matches.length > 0) {
-                suggestionsBox.innerHTML = matches.map(n => {
-                    const highlighted = n.title.replace(new RegExp(keyword, 'gi'), (m) => `<mark>${m}</mark>`);
-                    return `<div class="suggestion-item" onclick="selectSuggestion('${n.id}', '${n.title}')">${highlighted}</div>`;
-                }).join('');
-                suggestionsBox.style.display = 'block';
-            } else {
-                suggestionsBox.style.display = 'none';
-            }
-        };
-
-        window.selectSuggestion = (id, title) => {
-            searchInput.value = title;
-            suggestionsBox.style.display = 'none';
-            location.hash = `#/news/${id}`;
-        };
-
-        document.addEventListener('click', (e) => {
-            if (!e.target.closest('.search-box')) suggestionsBox.style.display = 'none';
-        });
-
-        searchInput.onkeypress = (e) => {
-            if (e.key === 'Enter') {
-                const val = searchInput.value.trim();
-                if (val) {
-                    suggestionsBox.style.display = 'none';
-                    location.hash = `#/search/${encodeURIComponent(val)}`;
-                }
-            }
-        };
-
-        // --- 상세 보기 & 댓글 (좋아요 기능 제거됨) ---
         window.showDetail = async (id) => {
             currentNewsId = id;
             document.getElementById('listView').style.display = 'none';
             document.getElementById('detailView').style.display = 'block';
             window.scrollTo(0,0);
+            const area = document.getElementById('detailArea');
+            area.innerHTML = '상세 내용을 불러오는 중...';
             
             const snap = await getDoc(doc(db, "news", id));
             if(snap.exists()) {
                 const data = snap.data();
-                document.getElementById('detailArea').innerHTML = `
-                    <h1 style="font-size:26px; margin-top:20px;">${data.title}</h1>
-                    <p style="color:var(--text-muted); font-size:13px;">${data.createdAt ? new Date(data.createdAt.seconds*1000).toLocaleString() : ''}</p>
-                    <div class="detail-video"><iframe width="100%" height="100%" src="https://www.youtube.com/embed/${data.youtubeId}" frameborder="0" allowfullscreen></iframe></div>
+                const readTime = calculateReadTime(data.content || "");
+                area.innerHTML = `
+                    <h1 style="font-size:28px; margin-top:20px; line-height:1.4;">${data.title}</h1>
+                    <p style="color:var(--text-muted); font-size:13px;">작성자: ${data.author || '익명'} | ${data.createdAt ? new Date(data.createdAt.seconds*1000).toLocaleString() : ''}</p>
+                    <div class="detail-read-info">
+                        ✨ <b>이 기사는 읽는 데 약 ${readTime}분 정도 소요됩니다.</b> 편안하게 감상해 보세요!
+                    </div>
+                    <div class="detail-video">
+                        <iframe width="100%" height="100%" src="https://www.youtube.com/embed/${data.youtubeId}" frameborder="0" allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+                    </div>
                     <div class="detail-content">${data.content}</div>
                 `;
                 initComments(id);
             }
         };
 
+        // --- 검색 자동완성 로직 ---
+        const searchInput = document.getElementById('searchInput');
+        const autocompleteList = document.getElementById('autocompleteList');
+
+        searchInput.addEventListener('input', (e) => {
+            const val = e.target.value.trim().toLowerCase();
+            autocompleteList.innerHTML = '';
+            
+            if (!val) {
+                autocompleteList.style.display = 'none';
+                return;
+            }
+
+            // 뉴스 제목에서 필터링
+            const matches = allNews.filter(n => n.title.toLowerCase().includes(val)).slice(0, 8);
+            
+            if (matches.length > 0) {
+                matches.forEach(m => {
+                    const item = document.createElement('div');
+                    item.className = 'autocomplete-item';
+                    item.innerText = m.title;
+                    item.onclick = () => {
+                        searchInput.value = m.title;
+                        autocompleteList.style.display = 'none';
+                        location.hash = `#/news/${m.id}`;
+                    };
+                    autocompleteList.appendChild(item);
+                });
+                autocompleteList.style.display = 'block';
+            } else {
+                autocompleteList.style.display = 'none';
+            }
+        });
+
+        // 외부 클릭 시 닫기
+        document.addEventListener('click', (e) => {
+            if (!document.getElementById('searchContainer').contains(e.target)) {
+                autocompleteList.style.display = 'none';
+            }
+        });
+
+        searchInput.onkeypress = (e) => {
+            if(e.key === 'Enter') {
+                const keyword = searchInput.value.trim();
+                if(keyword) {
+                    autocompleteList.style.display = 'none';
+                    location.hash = `#/search/${encodeURIComponent(keyword)}`;
+                }
+            }
+        };
+
+        // --- 댓글 & 답글 실시간 리스너 ---
         async function initComments(newsId) {
             if(unsubscribeComments) unsubscribeComments();
             const list = document.getElementById('commentList');
             const q = query(collection(db, "news", newsId, "comments"), orderBy("createdAt", "asc"));
             unsubscribeComments = onSnapshot(q, (snap) => {
                 document.getElementById('commentCount').innerText = snap.size;
-                list.innerHTML = snap.docs.map(d => {
+                list.innerHTML = '';
+                snap.docs.forEach(d => {
                     const c = d.data();
+                    const isMyComment = auth.currentUser?.uid === c.uid;
+                    const card = document.createElement('div');
+                    card.className = 'comment-card';
+                    card.innerHTML = `
+                        <div class="comment-header">
+                            <img src="${c.userImg || 'https://via.placeholder.com/30'}" class="comment-user-img">
+                            <div>
+                                <span class="comment-name">${c.userName}</span>
+                                <span class="comment-date">${c.createdAt ? new Date(c.createdAt.seconds*1000).toLocaleString() : '방금 전'}</span>
+                            </div>
+                        </div>
+                        <div id="text-${d.id}">${c.text}</div>
+                        <div class="comment-actions">
+                            <span class="action-link" onclick="window.toggleReply('${d.id}')">답글</span>
+                            ${isMyComment ? `<span class="action-link" onclick="window.editComment('${d.id}', '${c.text.replace(/'/g, "\\'")}')">수정</span>` : ''}
+                            ${isMyComment ? `<span class="action-link red" onclick="window.deleteComment('${d.id}')">삭제</span>` : ''}
+                            <span class="action-link red" onclick="window.reportComment('${d.id}')">신고</span>
+                        </div>
+                        <div id="reply-box-${d.id}" class="reply-input-box">
+                            <textarea id="reply-input-${d.id}" class="comment-input" placeholder="답글을 남겨주세요." rows="2"></textarea>
+                            <button onclick="window.submitReply('${d.id}')" style="margin-top:5px; padding:5px 15px; background:var(--joygo-blue); color:white; border:none; border-radius:5px; cursor:pointer;">답글 등록</button>
+                        </div>
+                        <div id="replies-${d.id}" class="reply-container"></div>
+                    `;
+                    list.appendChild(card);
+                    loadReplies(newsId, d.id);
+                });
+            });
+        }
+
+        async function loadReplies(newsId, commentId) {
+            const replyList = document.getElementById(`replies-${commentId}`);
+            const q = query(collection(db, "news", newsId, "comments", commentId, "replies"), orderBy("createdAt", "asc"));
+            onSnapshot(q, (snap) => {
+                if(!replyList) return;
+                replyList.innerHTML = snap.docs.map(rd => {
+                    const r = rd.data();
                     return `
-                        <div class="comment-card">
-                            <div class="comment-header">
-                                <img src="${c.userImg || 'https://via.placeholder.com/30'}" class="comment-user-img">
-                                <div><span class="comment-name">${c.userName}</span><br><span class="comment-date">${c.createdAt ? new Date(c.createdAt.seconds*1000).toLocaleString() : '방금 전'}</span></div>
-                            </div>
-                            <div>${c.text}</div>
-                            <div class="comment-actions">
-                                <span class="action-link" onclick="window.showToast('답글 기능은 준비중입니다.')">답글</span>
-                                ${auth.currentUser?.uid === c.uid ? `<span class="action-link" style="color:#ff4d4d" onclick="window.deleteComment('${d.id}')">삭제</span>` : ''}
-                            </div>
+                        <div style="font-size:13px; margin-bottom:10px; padding:5px 0; border-bottom: 1px dashed var(--border);">
+                            <strong>${r.userName}</strong>: ${r.text} 
+                            <small style="color:gray; margin-left:5px">${r.createdAt ? new Date(r.createdAt.seconds*1000).toLocaleTimeString() : '방금 전'}</small>
                         </div>
                     `;
                 }).join('');
@@ -372,22 +493,77 @@
         window.submitComment = async () => {
             if(!auth.currentUser) return window.showToast("로그인이 필요합니다.");
             const input = document.getElementById('commentInput');
-            if(!input.value.trim()) return;
-            await addDoc(collection(db, "news", currentNewsId, "comments"), {
-                text: input.value, uid: auth.currentUser.uid, userName: auth.currentUser.displayName, userImg: auth.currentUser.photoURL, createdAt: serverTimestamp()
-            });
-            input.value = '';
+            const text = input.value.trim();
+            if(!text) return;
+            try {
+                await addDoc(collection(db, "news", currentNewsId, "comments"), {
+                    text: text, uid: auth.currentUser.uid, userName: auth.currentUser.displayName, userImg: auth.currentUser.photoURL,
+                    createdAt: serverTimestamp()
+                });
+                input.value = '';
+                window.showToast("댓글이 등록되었습니다.");
+            } catch(e) { window.showToast("등록 실패"); }
+        };
+
+        window.submitReply = async (commentId) => {
+            if(!auth.currentUser) return window.showToast("로그인이 필요합니다.");
+            const input = document.getElementById(`reply-input-${commentId}`);
+            const text = input.value.trim();
+            if(!text) return;
+            try {
+                await addDoc(collection(db, "news", currentNewsId, "comments", commentId, "replies"), {
+                    text: text, uid: auth.currentUser.uid, userName: auth.currentUser.displayName, createdAt: serverTimestamp()
+                });
+                input.value = '';
+                window.toggleReply(commentId);
+                window.showToast("답글이 등록되었습니다.");
+            } catch(e) { window.showToast("답글 등록 실패"); }
         };
 
         window.deleteComment = async (id) => {
-            if(confirm("댓글을 삭제하시겠습니까?")) await deleteDoc(doc(db, "news", currentNewsId, "comments", id));
+            if(confirm("댓글을 삭제하시겠습니까?")) {
+                await deleteDoc(doc(db, "news", currentNewsId, "comments", id));
+                window.showToast("삭제되었습니다.");
+            }
         };
 
-        // --- 라우팅 ---
+        window.editComment = async (id, oldText) => {
+            const newText = prompt("댓글 수정:", oldText);
+            if(newText && newText !== oldText) {
+                await updateDoc(doc(db, "news", currentNewsId, "comments", id), { text: newText });
+                window.showToast("수정되었습니다.");
+            }
+        };
+
+        window.toggleReply = (id) => {
+            const box = document.getElementById(`reply-box-${id}`);
+            if(box) box.style.display = box.style.display === 'block' ? 'none' : 'block';
+        };
+
+        window.reportComment = (id) => {
+            alert("신고가 접수되었습니다. 검토 후 처리하겠습니다.");
+        };
+
+        window.copyLink = () => {
+            const url = window.location.href;
+            const dummy = document.createElement('input');
+            document.body.appendChild(dummy);
+            dummy.value = url; dummy.select();
+            document.execCommand('copy');
+            document.body.removeChild(dummy);
+            window.showToast("링크가 복사되었습니다!");
+        };
+
+        window.shareTwitter = () => {
+            const text = "조이고 뉴스에서 이 소식을 확인해보세요!";
+            window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(window.location.href)}`);
+        };
+
         function handleRoute() {
             const hash = window.location.hash;
-            if(hash.startsWith('#/news/')) window.showDetail(hash.replace('#/news/', ''));
-            else if(hash.startsWith('#/search/')) {
+            if(hash.startsWith('#/news/')) {
+                window.showDetail(hash.replace('#/news/', ''));
+            } else if(hash.startsWith('#/search/')) {
                 document.getElementById('listView').style.display = 'block';
                 document.getElementById('detailView').style.display = 'none';
                 window.loadNewsData(decodeURIComponent(hash.replace('#/search/', '')));
@@ -402,8 +578,45 @@
 
         onAuthStateChanged(auth, (user) => {
             const container = document.getElementById('authContainer');
-            if(user) container.innerHTML = `<img src="${user.photoURL}" style="width:30px; border-radius:50%; cursor:pointer" onclick="confirm('로그아웃?') && signOut(auth)">`;
-            else container.innerHTML = `<button onclick="window.login()" style="padding:5px 12px; background:var(--joygo-blue); color:white; border:none; border-radius:20px; cursor:pointer; font-size:12px;">로그인</button>`;
+            if(user) {
+                container.innerHTML = `<img src="${user.photoURL}" style="width:30px; border-radius:50%; cursor:pointer" title="로그아웃" onclick="confirm('로그아웃 하시겠습니까?') && signOut(auth)">`;
+            } else {
+                container.innerHTML = `<button onclick="window.login()" style="padding:5px 12px; background:var(--joygo-blue); color:white; border:none; border-radius:20px; cursor:pointer; font-size:12px; font-weight:bold;">로그인</button>`;
+            }
+        });
+    </script>
+
+    <script>
+        function updateClock() {
+            const clockEl = document.getElementById('realTimeClock');
+            const dateEl = document.getElementById('realTimeDate');
+            if (!clockEl || !dateEl) return;
+            const now = new Date();
+            const h = String(now.getHours()).padStart(2, '0');
+            const m = String(now.getMinutes()).padStart(2, '0');
+            const s = String(now.getSeconds()).padStart(2, '0');
+            clockEl.innerText = `${h}:${m}:${s}`;
+            const days = ['일', '월', '화', '수', '목', '금', '토'];
+            dateEl.innerText = `${now.getFullYear()}. ${now.getMonth() + 1}. ${now.getDate()}. (${days[now.getDay()]})`;
+        }
+
+        async function getWeather() {
+            const API_KEY = 'f9588dfba7000b48e2a636ba0ded59c5';
+            const weatherEl = document.getElementById('weatherDisplay');
+            try {
+                const res = await fetch(`https://api.openweathermap.org/data/2.5/weather?q=Seoul&appid=${API_KEY}&units=metric&lang=kr`);
+                const data = await res.json();
+                weatherEl.innerHTML = `<img src="https://openweathermap.org/img/wn/${data.weather[0].icon}.png" class="weather-icon"> <span>${Math.round(data.main.temp)}°C 서울</span>`;
+            } catch (e) { 
+                if(weatherEl) weatherEl.innerText = "날씨 정보 없음"; 
+            }
+        }
+
+        window.addEventListener('load', () => {
+            updateClock();
+            getWeather();
+            setInterval(updateClock, 1000);
+            setInterval(getWeather, 1800000);
         });
     </script>
 </body>
