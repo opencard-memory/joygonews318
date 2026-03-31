@@ -35,7 +35,6 @@
             transition: background 0.3s, color 0.3s;
         }
 
-        /* Reading Progress Bar */
         #readingProgress {
             position: fixed; top: 0; left: 0; width: 0%; height: 4px;
             background: var(--joygo-blue); z-index: 2001; transition: width 0.1s;
@@ -51,7 +50,6 @@
         }
 
         .header-main { display: flex; justify-content: space-between; align-items: center; gap: 20px; }
-
         .logo-section { display: flex; align-items: center; gap: 15px; flex: 1; overflow: hidden; }
         .logo img { height: 35px; cursor: pointer; flex-shrink: 0; }
 
@@ -78,7 +76,6 @@
         }
 
         .header-tools { display: flex; align-items: center; gap: 15px; }
-
         .info-panel { display: flex; flex-direction: column; align-items: flex-end; font-size: 11px; color: var(--text-muted); }
         .weather-display { display: flex; align-items: center; gap: 3px; font-weight: bold; }
         .weather-icon { width: 22px; height: 22px; }
@@ -244,9 +241,10 @@
         const provider = new GoogleAuthProvider();
 
         let allNews = [];
-        let currentNewsId = null; // 현재 보고 있는 뉴스의 ID
+        let currentNewsId = null;
+        let unsubscribeComments = null;
 
-        // --- 전역 함수 등록 (HTML에서 호출 가능하도록) ---
+        // --- 전역 함수 등록 ---
         window.login = () => signInWithPopup(auth, provider);
         window.showToast = (m) => {
             const t = document.getElementById('toast');
@@ -254,7 +252,7 @@
             setTimeout(()=>t.style.display='none', 2000);
         };
 
-        // --- 테마 및 UI ---
+        // --- 테마 설정 ---
         const themeToggle = document.getElementById('themeToggle');
         themeToggle.onclick = () => {
             const current = document.body.getAttribute('data-theme');
@@ -268,14 +266,7 @@
             themeToggle.innerText = '☀️ 라이트모드';
         }
 
-        window.onscroll = () => {
-            const winScroll = document.body.scrollTop || document.documentElement.scrollTop;
-            const height = document.documentElement.scrollHeight - document.documentElement.clientHeight;
-            const scrolled = (winScroll / height) * 100;
-            document.getElementById("readingProgress").style.width = scrolled + "%";
-        };
-
-        // --- 뉴스 로드 & 렌더링 ---
+        // --- 뉴스 데이터 로드 ---
         window.loadNewsData = async (filterKeyword = "") => {
             const grid = document.getElementById('newsGrid');
             grid.innerHTML = '<p>뉴스를 불러오는 중입니다...</p>';
@@ -294,7 +285,7 @@
             grid.innerHTML = '';
             let filtered = allNews;
             if(keyword) {
-                filtered = allNews.filter(n => n.title.includes(keyword) || n.content.includes(keyword));
+                filtered = allNews.filter(n => n.title.includes(keyword) || (n.content && n.content.includes(keyword)));
                 resultTitle.style.display = 'block';
                 document.getElementById('searchText').innerText = `'${keyword}' 검색 결과 (${filtered.length})`;
             } else {
@@ -308,7 +299,7 @@
                     <div class="video-wrapper"><iframe src="https://www.youtube.com/embed/${news.youtubeId}?controls=0"></iframe></div>
                     <div class="news-info">
                         <h3>${news.title}</h3>
-                        <p>${news.content}</p>
+                        <p>${news.content || ''}</p>
                     </div>
                 `;
                 grid.appendChild(card);
@@ -316,32 +307,35 @@
         }
 
         window.showDetail = async (id) => {
-            currentNewsId = id; // 전역 변수 업데이트
+            currentNewsId = id;
             document.getElementById('listView').style.display = 'none';
             document.getElementById('detailView').style.display = 'block';
             window.scrollTo(0,0);
             const area = document.getElementById('detailArea');
             area.innerHTML = '상세 내용을 불러오는 중...';
+            
             const snap = await getDoc(doc(db, "news", id));
             if(snap.exists()) {
                 const data = snap.data();
                 area.innerHTML = `
                     <h1 style="font-size:28px; margin-top:20px; line-height:1.4;">${data.title}</h1>
-                    <p style="color:var(--text-muted); font-size:13px;">작성자: ${data.author || '익명'} | ${new Date(data.createdAt?.seconds*1000).toLocaleString()}</p>
+                    <p style="color:var(--text-muted); font-size:13px;">작성자: ${data.author || '익명'} | ${data.createdAt ? new Date(data.createdAt.seconds*1000).toLocaleString() : ''}</p>
                     <div class="detail-video">
                         <iframe width="100%" height="100%" src="https://www.youtube.com/embed/${data.youtubeId}?autoplay=1" frameborder="0" allow="autoplay; encrypted-media" allowfullscreen></iframe>
                     </div>
                     <div class="detail-content">${data.content}</div>
                 `;
-                loadComments(id);
+                initComments(id);
             }
         };
 
-        // --- 댓글 & 답글 로직 ---
-        async function loadComments(newsId) {
+        // --- 댓글 & 답글 실시간 리스너 ---
+        function initComments(newsId) {
+            if(unsubscribeComments) unsubscribeComments();
             const list = document.getElementById('commentList');
             const q = query(collection(db, "news", newsId, "comments"), orderBy("createdAt", "asc"));
-            onSnapshot(q, (snap) => {
+            
+            unsubscribeComments = onSnapshot(q, (snap) => {
                 document.getElementById('commentCount').innerText = snap.size;
                 list.innerHTML = '';
                 snap.docs.forEach(d => {
@@ -364,7 +358,7 @@
                         </div>
                         <div class="comment-actions">
                             <span class="action-link" onclick="window.toggleReply('${d.id}')">답글</span>
-                            ${isMyComment ? `<span class="action-link" onclick="window.editComment('${d.id}', '${c.text}')">수정</span>` : ''}
+                            ${isMyComment ? `<span class="action-link" onclick="window.editComment('${d.id}', '${c.text.replace(/'/g, "\\'")}')">수정</span>` : ''}
                             ${isMyComment ? `<span class="action-link red" onclick="window.deleteComment('${d.id}')">삭제</span>` : ''}
                             <span class="action-link red" onclick="window.reportComment('${d.id}')">신고</span>
                         </div>
@@ -384,6 +378,7 @@
             const replyList = document.getElementById(`replies-${commentId}`);
             const q = query(collection(db, "news", newsId, "comments", commentId, "replies"), orderBy("createdAt", "asc"));
             onSnapshot(q, (snap) => {
+                if(!replyList) return;
                 replyList.innerHTML = snap.docs.map(rd => {
                     const r = rd.data();
                     return `
@@ -396,20 +391,20 @@
             });
         }
 
+        // --- 등록/수정/삭제 액션 ---
         window.submitComment = async () => {
             if(!auth.currentUser) return window.showToast("로그인이 필요합니다.");
             const input = document.getElementById('commentInput');
-            if(!input.value.trim()) return;
-            await addDoc(collection(db, "news", currentNewsId, "comments"), {
-                text: input.value, uid: auth.currentUser.uid, userName: auth.currentUser.displayName, userImg: auth.currentUser.photoURL,
-                likes: 0, dislikes: 0, createdAt: serverTimestamp()
-            });
-            input.value = '';
-        };
-
-        window.toggleReply = (id) => {
-            const box = document.getElementById(`reply-box-${id}`);
-            box.style.display = box.style.display === 'block' ? 'none' : 'block';
+            const text = input.value.trim();
+            if(!text) return;
+            try {
+                await addDoc(collection(db, "news", currentNewsId, "comments"), {
+                    text: text, uid: auth.currentUser.uid, userName: auth.currentUser.displayName, userImg: auth.currentUser.photoURL,
+                    likes: 0, dislikes: 0, createdAt: serverTimestamp()
+                });
+                input.value = '';
+                window.showToast("댓글이 등록되었습니다.");
+            } catch(e) { window.showToast("등록 실패"); }
         };
 
         window.submitReply = async (commentId) => {
@@ -417,8 +412,8 @@
             const input = document.getElementById(`reply-input-${commentId}`);
             const text = input.value.trim();
             if(!text) return;
-            
             try {
+                // 상위 경로(news/{newsId}/comments/{commentId}/replies)
                 await addDoc(collection(db, "news", currentNewsId, "comments", commentId, "replies"), {
                     text: text, uid: auth.currentUser.uid, userName: auth.currentUser.displayName, createdAt: serverTimestamp()
                 });
@@ -427,11 +422,12 @@
                 window.showToast("답글이 등록되었습니다.");
             } catch(e) {
                 console.error(e);
-                window.showToast("답글 등록 실패");
+                window.showToast("답글 등록 실패 (권한 확인)");
             }
         };
 
         window.reactComment = async (id, field) => {
+            if(!auth.currentUser) return window.showToast("로그인이 필요합니다.");
             const ref = doc(db, "news", currentNewsId, "comments", id);
             await updateDoc(ref, { [field]: increment(1) });
         };
@@ -451,19 +447,28 @@
             }
         };
 
+        window.toggleReply = (id) => {
+            const box = document.getElementById(`reply-box-${id}`);
+            if(box) box.style.display = box.style.display === 'block' ? 'none' : 'block';
+        };
+
         window.reportComment = (id) => {
             alert("신고가 접수되었습니다. 검토 후 처리하겠습니다.");
         };
 
-        // --- 공유 및 검색 ---
+        // --- 유틸리티 및 라우팅 ---
         window.copyLink = () => {
-            const dummy = document.createElement('input');
-            document.body.appendChild(dummy);
-            dummy.value = window.location.href;
-            dummy.select();
-            document.execCommand('copy');
-            document.body.removeChild(dummy);
-            window.showToast("링크가 복사되었습니다!");
+            const url = window.location.href;
+            navigator.clipboard.writeText(url).then(() => {
+                window.showToast("링크가 복사되었습니다!");
+            }).catch(() => {
+                const dummy = document.createElement('input');
+                document.body.appendChild(dummy);
+                dummy.value = url; dummy.select();
+                document.execCommand('copy');
+                document.body.removeChild(dummy);
+                window.showToast("링크가 복사되었습니다!");
+            });
         };
 
         window.shareTwitter = () => {
@@ -499,7 +504,7 @@
         onAuthStateChanged(auth, (user) => {
             const container = document.getElementById('authContainer');
             if(user) {
-                container.innerHTML = `<img src="${user.photoURL}" style="width:30px; border-radius:50%; cursor:pointer" title="로그아웃" onclick="confirm('로그아웃 하시겠습니까?') && auth.signOut()">`;
+                container.innerHTML = `<img src="${user.photoURL}" style="width:30px; border-radius:50%; cursor:pointer" title="로그아웃" onclick="confirm('로그아웃 하시겠습니까?') && signOut(auth)">`;
             } else {
                 container.innerHTML = `<button onclick="window.login()" style="padding:5px 12px; background:var(--joygo-blue); color:white; border:none; border-radius:20px; cursor:pointer; font-size:12px; font-weight:bold;">로그인</button>`;
             }
@@ -507,7 +512,6 @@
     </script>
 
     <script>
-        // 날씨 및 날짜 로직 (비-모듈)
         function initInfo() {
             const dateEl = document.getElementById('realTimeDate');
             const now = new Date();
