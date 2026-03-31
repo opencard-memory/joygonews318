@@ -30,7 +30,7 @@
 
         /* 최상단 장식 바 */
         .top-accent-bar {
-            height: 40px;
+            height: 10px;
             background-color: var(--joygo-blue);
             width: 100%;
         }
@@ -93,7 +93,6 @@
             color: #444;
         }
 
-        /* 날씨 및 위치 버튼 스타일 */
         .weather-display {
             font-size: 13px;
             color: #666;
@@ -113,7 +112,6 @@
             padding: 2px 5px;
             cursor: pointer;
             margin-left: 5px;
-            transition: background 0.2s;
         }
 
         /* 로그인 섹션 스타일 */
@@ -134,14 +132,12 @@
             cursor: pointer;
             transition: opacity 0.2s;
         }
-        .login-btn:hover { opacity: 0.9; }
 
         .user-profile {
             display: flex;
             align-items: center;
             gap: 8px;
             cursor: pointer;
-            position: relative;
         }
         .user-photo {
             width: 32px;
@@ -154,39 +150,35 @@
             font-weight: bold;
         }
 
-        /* 검색창 인터랙션 */
-        .search-wrap {
-            display: flex;
-            align-items: center;
-            position: relative;
+        /* 글쓰기 섹션 */
+        .write-container {
+            background: #f8f9fa;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 25px;
+            margin-bottom: 40px;
+            display: none; /* 로그인 전에는 숨김 */
         }
-
-        .search-input {
-            width: 0;
-            opacity: 0;
+        .write-container h3 { margin-top: 0; color: var(--joygo-blue); }
+        .input-group { margin-bottom: 15px; }
+        .input-group label { display: block; font-size: 13px; font-weight: bold; margin-bottom: 5px; }
+        .input-group input, .input-group textarea {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-family: inherit;
+            box-sizing: border-box;
+        }
+        .submit-btn {
+            background: var(--joygo-blue);
+            color: white;
             border: none;
-            border-bottom: 2px solid var(--joygo-blue);
-            padding: 5px 0;
-            transition: all 0.3s ease;
-            outline: none;
-            font-size: 14px;
-        }
-
-        .search-input.active {
-            width: 120px;
-            opacity: 1;
-            padding: 5px 10px;
-        }
-
-        .icon-btn {
-            background: none;
-            border: none;
-            font-size: 18px;
+            padding: 12px 25px;
+            border-radius: 8px;
+            font-weight: bold;
             cursor: pointer;
-            padding: 5px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+            width: 100%;
         }
 
         /* 네비게이션 */
@@ -225,17 +217,63 @@
 
         .news-grid {
             display: grid;
-            grid-template-columns: 2fr 1fr 1fr;
+            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
             gap: 30px;
             margin-bottom: 60px;
         }
 
-        .news-item .img-holder {
+        .news-item {
+            border: 1px solid #eee;
+            border-radius: 12px;
+            overflow: hidden;
+            transition: transform 0.2s;
+            background: white;
+            display: flex;
+            flex-direction: column;
+        }
+        .news-item:hover { transform: translateY(-5px); box-shadow: 0 10px 20px rgba(0,0,0,0.05); }
+
+        .video-wrapper {
+            position: relative;
+            padding-bottom: 56.25%; /* 16:9 Aspect Ratio */
+            height: 0;
+            background: #000;
+        }
+        .video-wrapper iframe {
+            position: absolute;
+            top: 0;
+            left: 0;
             width: 100%;
-            aspect-ratio: 16/9;
-            background-color: #f0f2f5;
-            border-radius: 4px;
-            border: 1px dashed #ccc;
+            height: 100%;
+        }
+
+        .news-content-area {
+            padding: 20px;
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+        }
+        .news-content-area h3 { margin: 0 0 10px 0; font-size: 18px; }
+        .news-content-area p { font-size: 14px; color: #555; margin-bottom: 15px; flex-grow: 1; }
+        
+        .news-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-top: 1px solid #f0f0f0;
+            padding-top: 15px;
+            font-size: 12px;
+            color: #888;
+        }
+        .report-btn {
+            background: none;
+            border: none;
+            color: #ff4d4d;
+            cursor: pointer;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            gap: 3px;
         }
 
         /* 토스트 알림 */
@@ -254,7 +292,7 @@
         }
 
         @media (max-width: 1024px) {
-            .news-grid { grid-template-columns: 1fr 1fr; }
+            .news-grid { grid-template-columns: 1fr; }
             .header-main { flex-direction: column; gap: 20px; }
         }
     </style>
@@ -270,7 +308,7 @@
             </div>
             
             <div class="breaking-news" id="newsTicker">
-                <span>[알림]</span> 새로운 소식을 준비 중입니다...
+                <span>[속보]</span> 시민들이 직접 만드는 뉴스 플랫폼 '조이고 뉴스' 정식 오픈!
             </div>
 
             <div class="header-tools">
@@ -282,11 +320,6 @@
                     </div>
                 </div>
                 
-                <div class="search-wrap">
-                    <input type="text" id="searchInput" class="search-input" placeholder="검색어...">
-                    <button class="icon-btn" onclick="handleSearch()">🔍</button>
-                </div>
-
                 <!-- 로그인 섹션 -->
                 <div class="auth-container" id="authContainer">
                     <button class="login-btn" id="loginBtn">로그인</button>
@@ -308,16 +341,31 @@
     </header>
 
     <main>
+        <!-- 글쓰기 섹션 (로그인 시 보임) -->
+        <section class="write-container" id="writeSection">
+            <h3>📢 새로운 뉴스 제보하기</h3>
+            <div class="input-group">
+                <label>뉴스 제목</label>
+                <input type="text" id="newsTitle" placeholder="강렬한 제목을 입력하세요">
+            </div>
+            <div class="input-group">
+                <label>유튜브 링크</label>
+                <input type="text" id="newsYoutube" placeholder="https://www.youtube.com/watch?v=...">
+            </div>
+            <div class="input-group">
+                <label>상세 내용</label>
+                <textarea id="newsContent" rows="4" placeholder="뉴스에 대한 설명을 적어주세요"></textarea>
+            </div>
+            <button class="submit-btn" id="submitNewsBtn">뉴스 발행하기</button>
+        </section>
+
         <section>
-            <h2 class="section-header">조이고 뉴스</h2>
-            <div class="news-grid">
-                <article class="news-item main-story">
-                    <div class="img-holder"></div>
-                    <h2>새로운 뉴스가 곧 업데이트됩니다</h2>
-                    <p>현재 최신 소식을 확인 중입니다. 잠시만 기다려 주세요.</p>
-                </article>
-                <article class="news-item sub-story"><div class="img-holder"></div><h3>콘텐츠 준비 중</h3></article>
-                <article class="news-item sub-story"><div class="img-holder"></div><h3>콘텐츠 준비 중</h3></article>
+            <h2 class="section-header">최신 뉴스 피드</h2>
+            <div class="news-grid" id="newsGrid">
+                <!-- 뉴스 아이템들이 여기에 동적으로 들어갑니다 -->
+                <div style="grid-column: 1/-1; text-align: center; padding: 50px; color: #999;">
+                    뉴스를 불러오고 있습니다...
+                </div>
             </div>
         </section>
     </main>
@@ -328,7 +376,9 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js";
         import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js";
+        import { getFirestore, collection, addDoc, getDocs, query, orderBy, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
 
+        // Firebase 설정 (사용자님의 설정값)
         const firebaseConfig = {
             apiKey: "AIzaSyDOu8jfgNproVHenknRdsG-HPScyFMdO0k",
             authDomain: "joygonews318.firebaseapp.com",
@@ -339,48 +389,145 @@
             measurementId: "G-YGPH1T655Y"
         };
 
-        // Firebase 초기화
+        // 초기화
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
+        const db = getFirestore(app);
         const provider = new GoogleAuthProvider();
 
         const authContainer = document.getElementById('authContainer');
-        const loginBtn = document.getElementById('loginBtn');
+        const writeSection = document.getElementById('writeSection');
+        const submitNewsBtn = document.getElementById('submitNewsBtn');
 
-        // 로그인 핸들러
-        loginBtn.onclick = async () => {
+        // 1. 유튜브 ID 추출 함수
+        function getYoutubeID(url) {
+            const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
+            const match = url.match(regExp);
+            return (match && match[2].length === 11) ? match[2] : null;
+        }
+
+        // 2. 뉴스 업로드 함수
+        window.uploadNews = async () => {
+            const title = document.getElementById('newsTitle').value;
+            const url = document.getElementById('newsYoutube').value;
+            const content = document.getElementById('newsContent').value;
+            const videoId = getYoutubeID(url);
+
+            if (!auth.currentUser) return showToast("로그인이 필요합니다.");
+            if (!title || !videoId || !content) return showToast("모든 항목을 올바르게 입력해주세요.");
+
             try {
-                await signInWithPopup(auth, provider);
-                showToast("로그인되었습니다.");
-            } catch (error) {
-                console.error("Login Error:", error);
-                showToast("로그인에 실패했습니다.");
+                await addDoc(collection(db, "news"), {
+                    title: title,
+                    youtubeId: videoId,
+                    content: content,
+                    author: auth.currentUser.displayName,
+                    authorUid: auth.currentUser.uid,
+                    authorPhoto: auth.currentUser.photoURL,
+                    createdAt: serverTimestamp()
+                });
+                showToast("뉴스가 발행되었습니다!");
+                // 입력창 초기화
+                document.getElementById('newsTitle').value = '';
+                document.getElementById('newsYoutube').value = '';
+                document.getElementById('newsContent').value = '';
+                loadNews(); // 뉴스 리스트 새로고침
+            } catch (e) {
+                console.error("Error:", e);
+                showToast("뉴스 발행에 실패했습니다.");
+            }
+        };
+
+        // 3. 뉴스 불러오기 함수
+        window.loadNews = async () => {
+            const newsGrid = document.getElementById('newsGrid');
+            try {
+                const q = query(collection(db, "news"), orderBy("createdAt", "desc"));
+                const querySnapshot = await getDocs(q);
+                
+                if (querySnapshot.empty) {
+                    newsGrid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 50px; color: #999;">등록된 뉴스가 없습니다. 첫 뉴스를 제보해보세요!</div>';
+                    return;
+                }
+
+                newsGrid.innerHTML = '';
+                querySnapshot.forEach((doc) => {
+                    const data = doc.data();
+                    const date = data.createdAt ? new Date(data.createdAt.seconds * 1000).toLocaleDateString() : '방금 전';
+                    
+                    newsGrid.innerHTML += `
+                        <article class="news-item">
+                            <div class="video-wrapper">
+                                <iframe src="https://www.youtube.com/embed/${data.youtubeId}" frameborder="0" allowfullscreen></iframe>
+                            </div>
+                            <div class="news-content-area">
+                                <h3>${data.title}</h3>
+                                <p>${data.content}</p>
+                                <div class="news-footer">
+                                    <div>
+                                        <strong>${data.author || '익명'}</strong> · ${date}
+                                    </div>
+                                    <button class="report-btn" onclick="window.reportNews('${doc.id}')">
+                                        🚩 신고
+                                    </button>
+                                </div>
+                            </div>
+                        </article>
+                    `;
+                });
+            } catch (e) {
+                console.error("Error loading news:", e);
+                newsGrid.innerHTML = '<div style="color:red; text-align:center; grid-column:1/-1;">뉴스를 불러오는 중 오류가 발생했습니다.</div>';
+            }
+        };
+
+        // 4. 신고 함수
+        window.reportNews = async (newsId) => {
+            if (!auth.currentUser) return showToast("로그인 후 신고해주세요.");
+            if (!confirm("이 게시물을 부적절한 콘텐츠로 신고하시겠습니까?")) return;
+
+            try {
+                await addDoc(collection(db, "reports"), {
+                    newsId: newsId,
+                    reporterUid: auth.currentUser.uid,
+                    reporterEmail: auth.currentUser.email,
+                    timestamp: serverTimestamp()
+                });
+                showToast("신고가 접수되었습니다. 감사합니다.");
+            } catch (e) {
+                showToast("신고 처리 중 오류가 발생했습니다.");
             }
         };
 
         // 인증 상태 감시
         onAuthStateChanged(auth, (user) => {
             if (user) {
-                // 로그인 상태
                 authContainer.innerHTML = `
                     <div class="user-profile" id="userProfile" title="로그아웃">
                         <span class="user-name">${user.displayName}님</span>
                         <img src="${user.photoURL}" class="user-photo" alt="profile">
                     </div>
                 `;
+                writeSection.style.display = 'block'; // 로그인하면 글쓰기 섹션 노출
                 document.getElementById('userProfile').onclick = () => {
                     if(confirm("로그아웃 하시겠습니까?")) signOut(auth);
                 };
             } else {
-                // 로그아웃 상태
                 authContainer.innerHTML = `<button class="login-btn" id="loginBtn">로그인</button>`;
+                writeSection.style.display = 'none'; // 로그아웃하면 숨김
                 document.getElementById('loginBtn').onclick = () => signInWithPopup(auth, provider);
             }
         });
+
+        // 버튼 이벤트 연결
+        submitNewsBtn.addEventListener('click', window.uploadNews);
+
+        // 초기 실행
+        window.loadNews();
     </script>
 
     <script>
-        // 날씨 및 기타 UI 스크립트
+        // 날씨 및 기타 일반 UI 스크립트
         const WEATHER_API_KEY = 'f9588dfba7000b48e2a636ba0ded59c5';
 
         function initDate() {
@@ -432,17 +579,6 @@
             toast.innerText = msg;
             toast.style.display = 'block';
             setTimeout(() => { toast.style.display = 'none'; }, 3000);
-        }
-
-        function handleSearch() {
-            const input = document.getElementById('searchInput');
-            if (!input.classList.contains('active')) {
-                input.classList.add('active');
-                input.focus();
-            } else {
-                if (input.value.trim()) showToast(`'${input.value}' 검색 결과가 없습니다.`);
-                input.classList.remove('active');
-            }
         }
 
         window.onload = () => {
