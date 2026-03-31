@@ -41,7 +41,8 @@
             z-index: 1000;
             box-shadow: 0 2px 10px rgba(0,0,0,0.02);
         }
-        .logo img { height: 35px; cursor: pointer; }
+        .logo img { height: 35px; cursor: pointer; transition: opacity 0.2s; }
+        .logo img:hover { opacity: 0.8; }
 
         /* 메인 레이아웃 */
         main {
@@ -191,7 +192,8 @@
 
 <header>
     <div class="logo">
-        <a href="#"><img src="https://i.postimg.cc/PrK5Ysh4/joygo-logo-qenyzfo8a6cul319bqetl2et0yfhgwizrrfan2szcw.png" alt="JoyGO News Weather"></a>
+        <!-- 배너 이미지 클릭 시 조이고 뉴스 홈페이지로 이동하도록 수정 -->
+        <a href="https://www.joygonews.uk"><img src="https://i.postimg.cc/PrK5Ysh4/joygo-logo-qenyzfo8a6cul319bqetl2et0yfhgwizrrfan2szcw.png" alt="JoyGO News Weather"></a>
     </div>
     <div id="headerTime" style="font-size: 14px; font-weight: bold; color: var(--joygo-blue);"></div>
 </header>
@@ -352,7 +354,7 @@
         }
     }
 
-    // 사이드바 주요 도시 날씨 요약 (Error Fix: null check added)
+    // 사이드바 주요 도시 날씨 요약 (에러 수정됨)
     async function fetchSideCities() {
         const cities = { 'Seoul': 'sideSeoul', 'Busan': 'sideBusan', 'Jeju': 'sideJeju' };
         for (const [city, elementId] of Object.entries(cities)) {
@@ -361,7 +363,6 @@
                 const res = await fetch(url);
                 const data = await res.json();
                 
-                // 데이터가 유효한지 확인 후 렌더링 (undefined 에러 방지)
                 if (data && data.main && data.main.temp !== undefined) {
                     document.getElementById(elementId).innerText = `${Math.round(data.main.temp)}°`;
                 } else {
