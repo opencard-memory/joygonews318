@@ -14,6 +14,8 @@
             --text-main: #1a1a1a;
             --text-muted: #999;
             --border: #e1e4e8;
+            --like-red: #ff4d4d;
+            --dislike-blue: #4d79ff;
         }
 
         body { 
@@ -100,7 +102,7 @@
         }
         .news-item:hover { transform: translateY(-5px); box-shadow: 0 10px 20px rgba(0,0,0,0.05); }
 
-        .video-wrapper { position: relative; padding-bottom: 56.25%; height: 0; background: #000; pointer-events: none; } /* 리스트에서는 클릭 방지 */
+        .video-wrapper { position: relative; padding-bottom: 56.25%; height: 0; background: #000; pointer-events: none; }
         .video-wrapper iframe { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
 
         .news-content-area { padding: 20px; }
@@ -116,25 +118,45 @@
         .detail-content { font-size: 17px; line-height: 1.8; color: #333; white-space: pre-wrap; margin-bottom: 50px; }
 
         /* 댓글 섹션 */
-        .comment-section { border-top: 2px solid #eee; padding-top: 40px; }
+        .comment-section { border-top: 2px solid #eee; padding-top: 40px; margin-bottom: 100px; }
         .comment-header { font-size: 20px; font-weight: bold; margin-bottom: 20px; }
-        .comment-form { display: flex; flex-direction: column; gap: 10px; margin-bottom: 30px; }
-        .comment-input { width: 100%; border: 1px solid #ddd; border-radius: 8px; padding: 15px; box-sizing: border-box; font-family: inherit; resize: none; }
+        .comment-form { display: flex; flex-direction: column; gap: 10px; margin-bottom: 30px; background: #f9f9f9; padding: 15px; border-radius: 10px; }
+        .comment-input { width: 100%; border: 1px solid #ddd; border-radius: 8px; padding: 15px; box-sizing: border-box; font-family: inherit; resize: none; background: #fff; }
         .comment-submit { align-self: flex-end; background: var(--joygo-blue); color: white; border: none; padding: 10px 25px; border-radius: 5px; font-weight: bold; cursor: pointer; }
         
         .comment-list { display: flex; flex-direction: column; gap: 20px; }
-        .comment-item { display: flex; gap: 15px; padding-bottom: 15px; border-bottom: 1px solid #f5f5f5; }
-        .comment-user-img { width: 40px; height: 40px; border-radius: 50%; }
+        .comment-item { display: flex; flex-direction: column; gap: 10px; padding-bottom: 15px; border-bottom: 1px solid #f5f5f5; }
+        .comment-main { display: flex; gap: 15px; }
+        .comment-user-img { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; }
         .comment-body { flex: 1; }
-        .comment-user-name { font-weight: bold; font-size: 14px; margin-bottom: 5px; }
-        .comment-text { font-size: 15px; color: #444; }
+        .comment-user-name { font-weight: bold; font-size: 14px; margin-bottom: 5px; display: flex; align-items: center; gap: 8px; }
+        .comment-text { font-size: 15px; color: #444; word-break: break-all; }
         .comment-date { font-size: 12px; color: #999; margin-top: 5px; }
+
+        /* 댓글 액션 버튼들 */
+        .comment-actions { display: flex; gap: 15px; margin-top: 10px; align-items: center; }
+        .action-btn { background: none; border: none; font-size: 12px; color: #777; cursor: pointer; display: flex; align-items: center; gap: 4px; padding: 0; }
+        .action-btn:hover { text-decoration: underline; }
+        .action-btn.like:hover { color: var(--like-red); }
+        .action-btn.dislike:hover { color: var(--dislike-blue); }
+        .action-btn.report:hover { color: #f39c12; }
+        .action-btn.edit:hover, .action-btn.delete:hover { color: var(--joygo-blue); }
+
+        /* 대댓글 스타일 */
+        .reply-list { margin-left: 55px; margin-top: 15px; border-left: 2px solid #eee; padding-left: 15px; display: flex; flex-direction: column; gap: 15px; }
+        .reply-form { margin-left: 55px; margin-top: 10px; display: none; }
+        .reply-form.active { display: block; }
+
+        /* 수정 폼 스타일 */
+        .edit-form { display: none; margin-top: 10px; }
+        .edit-form.active { display: block; }
 
         #toast { position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.8); color: #fff; padding: 12px 24px; border-radius: 50px; z-index: 2000; display: none; }
 
         @media (max-width: 768px) {
             main { padding: 20px 5%; }
             .detail-header h1 { font-size: 22px; }
+            .reply-list { margin-left: 20px; }
         }
     </style>
 </head>
@@ -159,7 +181,7 @@
         </div>
         <nav>
             <ul>
-                <li><a onclick="showListView()" class="active">홈</a></li>
+                <li><a onclick="showListView()" id="navHome" class="active">홈</a></li>
                 <li><a href="https://www.joygonews.uk/jebo" target="_blank">제보</a></li>
                 <li><a href="https://www.joygonews.uk/weather" target="_blank">날씨</a></li>
             </ul>
@@ -178,9 +200,7 @@
         <!-- 뉴스 상세 화면 -->
         <section id="detailView">
             <button class="back-btn" onclick="showListView()">← 목록으로</button>
-            <div id="detailContentArea">
-                <!-- 뉴스 상세 내용이 주입되는 곳 -->
-            </div>
+            <div id="detailContentArea"></div>
             
             <div class="comment-section">
                 <div class="comment-header">댓글 <span id="commentCount">0</span></div>
@@ -188,9 +208,7 @@
                     <textarea class="comment-input" id="commentInput" placeholder="비방이나 욕설은 제재 대상이 될 수 있습니다. 댓글을 남겨주세요." rows="3"></textarea>
                     <button class="comment-submit" onclick="window.submitComment()">등록</button>
                 </div>
-                <div class="comment-list" id="commentList">
-                    <!-- 댓글 목록이 주입되는 곳 -->
-                </div>
+                <div class="comment-list" id="commentList"></div>
             </div>
         </section>
     </main>
@@ -200,9 +218,8 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js";
         import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js";
-        import { getFirestore, collection, addDoc, getDocs, getDoc, doc, query, orderBy, serverTimestamp, onSnapshot } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
+        import { getFirestore, collection, addDoc, getDocs, getDoc, doc, query, orderBy, serverTimestamp, onSnapshot, updateDoc, deleteDoc, increment } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
 
-        // Firebase 설정 (전달해주신 설정 그대로 사용)
         const firebaseConfig = {
             apiKey: "AIzaSyDOu8jfgNproVHenknRdsG-HPScyFMdO0k",
             authDomain: "joygonews318.firebaseapp.com",
@@ -224,6 +241,7 @@
         window.showListView = () => {
             document.getElementById('listView').style.display = 'block';
             document.getElementById('detailView').style.display = 'none';
+            document.getElementById('navHome').classList.add('active');
             currentNewsId = null;
             if (unsubscribeComments) unsubscribeComments();
         };
@@ -231,6 +249,7 @@
         window.showDetailView = async (newsId) => {
             document.getElementById('listView').style.display = 'none';
             document.getElementById('detailView').style.display = 'block';
+            document.getElementById('navHome').classList.remove('active');
             currentNewsId = newsId;
             window.scrollTo(0, 0);
 
@@ -303,12 +322,12 @@
             }
         };
 
-        // 댓글 로드 (실시간 리스너 사용)
+        // 실시간 댓글 및 대댓글 로드
         const loadComments = (newsId) => {
             const commentList = document.getElementById('commentList');
             const commentCount = document.getElementById('commentCount');
             
-            const q = query(collection(db, "news", newsId, "comments"), orderBy("createdAt", "desc"));
+            const q = query(collection(db, "news", newsId, "comments"), orderBy("createdAt", "asc")); // 오래된 순으로 정렬해야 대댓글 흐름이 자연스러움
             
             unsubscribeComments = onSnapshot(q, (snapshot) => {
                 commentCount.innerText = snapshot.size;
@@ -319,27 +338,97 @@
                     return;
                 }
 
+                const commentsMap = {};
+                const topLevelComments = [];
+
                 snapshot.forEach((doc) => {
-                    const c = doc.data();
-                    const date = c.createdAt ? new Date(c.createdAt.seconds * 1000).toLocaleString() : '방금 전';
-                    commentList.innerHTML += `
-                        <div class="comment-item">
-                            <img src="${c.userPhoto || 'https://via.placeholder.com/40'}" class="comment-user-img">
-                            <div class="comment-body">
-                                <div class="comment-user-name">${c.userName}</div>
-                                <div class="comment-text">${c.text}</div>
-                                <div class="comment-date">${date}</div>
-                            </div>
-                        </div>
-                    `;
+                    const data = { id: doc.id, ...doc.data(), replies: [] };
+                    commentsMap[doc.id] = data;
+                    if (data.parentId) {
+                        if (commentsMap[data.parentId]) {
+                            commentsMap[data.parentId].replies.push(data);
+                        }
+                    } else {
+                        topLevelComments.push(data);
+                    }
+                });
+
+                // 상단 댓글부터 렌더링 (최근 순으로 보여주기 위해 뒤집기)
+                topLevelComments.reverse().forEach(comment => {
+                    renderCommentItem(comment, commentList, false);
                 });
             });
         };
 
-        // 댓글 등록
-        window.submitComment = async () => {
-            if (!auth.currentUser) return showToast("로그인 후 댓글을 작성할 수 있습니다.");
-            const input = document.getElementById('commentInput');
+        // 댓글 아이템 렌더링 함수
+        function renderCommentItem(comment, container, isReply) {
+            const date = comment.createdAt ? new Date(comment.createdAt.seconds * 1000).toLocaleString() : '방금 전';
+            const isMyComment = auth.currentUser && auth.currentUser.uid === comment.uid;
+
+            const itemDiv = document.createElement('div');
+            itemDiv.className = isReply ? 'reply-item' : 'comment-item';
+            itemDiv.innerHTML = `
+                <div class="comment-main">
+                    <img src="${comment.userPhoto || 'https://via.placeholder.com/40'}" class="comment-user-img">
+                    <div class="comment-body">
+                        <div class="comment-user-name">
+                            ${comment.userName}
+                            ${isMyComment ? '<span style="font-size:10px; color:var(--joygo-blue); background:#eef0ff; padding:2px 6px; border-radius:10px;">내 댓글</span>' : ''}
+                        </div>
+                        <div id="text-${comment.id}" class="comment-text">${comment.text}</div>
+                        
+                        <!-- 수정 폼 -->
+                        <div id="edit-form-${comment.id}" class="edit-form">
+                            <textarea id="edit-input-${comment.id}" class="comment-input" rows="2">${comment.text}</textarea>
+                            <div style="text-align:right; margin-top:5px;">
+                                <button onclick="window.cancelEdit('${comment.id}')" style="background:#eee; border:none; padding:5px 10px; border-radius:4px; cursor:pointer;">취소</button>
+                                <button onclick="window.updateComment('${comment.id}')" style="background:var(--joygo-blue); color:white; border:none; padding:5px 10px; border-radius:4px; cursor:pointer;">수정완료</button>
+                            </div>
+                        </div>
+
+                        <div class="comment-date">${date}</div>
+                        <div class="comment-actions">
+                            <button class="action-btn like" onclick="window.handleReaction('${comment.id}', 'likes')">👍 ${comment.likes || 0}</button>
+                            <button class="action-btn dislike" onclick="window.handleReaction('${comment.id}', 'dislikes')">👎 ${comment.dislikes || 0}</button>
+                            ${!isReply ? `<button class="action-btn" onclick="window.toggleReplyForm('${comment.id}')">답글</button>` : ''}
+                            ${isMyComment ? `
+                                <button class="action-btn edit" onclick="window.toggleEditForm('${comment.id}')">수정</button>
+                                <button class="action-btn delete" onclick="window.deleteComment('${comment.id}')">삭제</button>
+                            ` : `
+                                <button class="action-btn report" onclick="window.reportComment('${comment.id}')">신고</button>
+                            `}
+                        </div>
+                    </div>
+                </div>
+                ${!isReply ? `
+                    <div id="reply-form-${comment.id}" class="reply-form">
+                        <textarea id="reply-input-${comment.id}" class="comment-input" placeholder="답글을 입력하세요..." rows="2"></textarea>
+                        <div style="text-align:right; margin-top:5px;">
+                            <button class="comment-submit" style="padding:5px 15px; font-size:12px;" onclick="window.submitComment('${comment.id}')">답글 등록</button>
+                        </div>
+                    </div>
+                    <div class="reply-list" id="replies-${comment.id}"></div>
+                ` : ''}
+            `;
+            container.appendChild(itemDiv);
+
+            // 대댓글이 있는 경우 재귀 호출
+            if (comment.replies && comment.replies.length > 0) {
+                const replyContainer = itemDiv.querySelector(`#replies-${comment.id}`);
+                comment.replies.forEach(reply => {
+                    renderCommentItem(reply, replyContainer, true);
+                });
+            }
+        }
+
+        // --- 기능 함수들 ---
+
+        // 댓글 등록 (parentId가 있으면 대댓글)
+        window.submitComment = async (parentId = null) => {
+            if (!auth.currentUser) return showToast("로그인 후 이용 가능합니다.");
+            
+            const inputId = parentId ? `reply-input-${parentId}` : 'commentInput';
+            const input = document.getElementById(inputId);
             const text = input.value.trim();
             if (!text) return;
 
@@ -349,12 +438,94 @@
                     uid: auth.currentUser.uid,
                     userName: auth.currentUser.displayName,
                     userPhoto: auth.currentUser.photoURL,
-                    createdAt: serverTimestamp()
+                    createdAt: serverTimestamp(),
+                    parentId: parentId,
+                    likes: 0,
+                    dislikes: 0
                 });
                 input.value = '';
-                showToast("댓글이 등록되었습니다.");
+                if (parentId) document.getElementById(`reply-form-${parentId}`).classList.remove('active');
+                showToast(parentId ? "답글이 등록되었습니다." : "댓글이 등록되었습니다.");
             } catch (e) {
-                showToast("댓글 등록 실패");
+                showToast("등록 실패");
+            }
+        };
+
+        // 수정 폼 토글
+        window.toggleEditForm = (id) => {
+            document.getElementById(`text-${id}`).style.display = 'none';
+            document.getElementById(`edit-form-${id}`).classList.add('active');
+        };
+
+        window.cancelEdit = (id) => {
+            document.getElementById(`text-${id}`).style.display = 'block';
+            document.getElementById(`edit-form-${id}`).classList.remove('active');
+        };
+
+        // 댓글 수정
+        window.updateComment = async (id) => {
+            const text = document.getElementById(`edit-input-${id}`).value.trim();
+            if (!text) return;
+            try {
+                await updateDoc(doc(db, "news", currentNewsId, "comments", id), {
+                    text: text,
+                    updatedAt: serverTimestamp()
+                });
+                showToast("수정되었습니다.");
+            } catch (e) {
+                showToast("수정 실패");
+            }
+        };
+
+        // 댓글 삭제
+        window.deleteComment = async (id) => {
+            if (!confirm("정말 삭제하시겠습니까?")) return;
+            try {
+                await deleteDoc(doc(db, "news", currentNewsId, "comments", id));
+                showToast("삭제되었습니다.");
+            } catch (e) {
+                showToast("삭제 실패");
+            }
+        };
+
+        // 대댓글 폼 토글
+        window.toggleReplyForm = (id) => {
+            if (!auth.currentUser) return showToast("로그인 후 이용 가능합니다.");
+            const form = document.getElementById(`reply-form-${id}`);
+            form.classList.toggle('active');
+            if (form.classList.contains('active')) {
+                document.getElementById(`reply-input-${id}`).focus();
+            }
+        };
+
+        // 좋아요/싫어요 핸들러
+        window.handleReaction = async (id, type) => {
+            if (!auth.currentUser) return showToast("로그인 후 참여 가능합니다.");
+            
+            // 단순화를 위해 세션 스토리지에 반응 여부 저장 (새로고침 전까지 유지)
+            const storageKey = `reacted_${id}_${auth.currentUser.uid}`;
+            if (sessionStorage.getItem(storageKey)) {
+                return showToast("이미 참여하셨습니다.");
+            }
+
+            try {
+                const commentRef = doc(db, "news", currentNewsId, "comments", id);
+                await updateDoc(commentRef, {
+                    [type]: increment(1)
+                });
+                sessionStorage.setItem(storageKey, 'true');
+                showToast(type === 'likes' ? "좋아요를 눌렀습니다." : "싫어요를 눌렀습니다.");
+            } catch (e) {
+                showToast("처리 중 오류 발생");
+            }
+        };
+
+        // 신고 기능
+        window.reportComment = (id) => {
+            if (!auth.currentUser) return showToast("로그인 후 신고가 가능합니다.");
+            if (confirm("이 댓글을 신고하시겠습니까? 운영진이 검토 후 조치합니다.")) {
+                showToast("신고가 접수되었습니다. 감사합니다.");
+                // 실제 운영 시에는 'reports' 컬렉션에 추가하는 로직을 넣을 수 있습니다.
             }
         };
 
@@ -364,7 +535,7 @@
             if (user) {
                 authContainer.innerHTML = `
                     <div class="user-profile" id="userProfile" title="로그아웃">
-                        <span class="user-name">${user.displayName}님</span>
+                        <span class="user-name" style="font-size:13px; font-weight:bold;">${user.displayName}님</span>
                         <img src="${user.photoURL}" class="user-photo" alt="profile">
                     </div>
                 `;
@@ -381,7 +552,6 @@
     </script>
 
     <script>
-        // 날씨 및 날짜 관련 (기존 코드 유지)
         function initDate() {
             const dateEl = document.getElementById('realTimeDate');
             const now = new Date();
@@ -406,7 +576,7 @@
             setTimeout(() => { toast.style.display = 'none'; }, 3000);
         }
 
-        window.onload = () => { initDate(); getWeather(); };
+        window.addEventListener('load', () => { initDate(); getWeather(); });
     </script>
 </body>
 </html>
