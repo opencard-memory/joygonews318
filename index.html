@@ -333,7 +333,8 @@
                 <li><a href="#">실시간</a></li>
                 <li><a href="#">뉴스</a></li>
                 <li><a href="#">시사교양</a></li>
-                <li><a href="https://padlet.com/koreacomsearch/joygonews" target="_blank">제보</a></li>
+                <!-- 제보 링크 수정 완료 -->
+                <li><a href="https://www.joygonews.uk/jebo" target="_blank">제보</a></li>
                 <li><a href="#">UN</a></li>
                 <li><a href="https://www.joygonews.uk/weather">날씨</a></li>
             </ul>
@@ -341,11 +342,27 @@
     </header>
 
     <main>
+        <!-- 글쓰기 섹션 (로그인 시 보임) -->
+        <section class="write-container" id="writeSection">
+            <h3>📢 새로운 뉴스 제보하기</h3>
+            <div class="input-group">
+                <label>뉴스 제목</label>
+                <input type="text" id="newsTitle" placeholder="강렬한 제목을 입력하세요">
+            </div>
+            <div class="input-group">
+                <label>유튜브 링크</label>
+                <input type="text" id="newsYoutube" placeholder="https://www.youtube.com/watch?v=...">
+            </div>
+            <div class="input-group">
+                <label>상세 내용</label>
+                <textarea id="newsContent" rows="4" placeholder="뉴스에 대한 설명을 적어주세요"></textarea>
+            </div>
+            <button class="submit-btn" id="submitNewsBtn">뉴스 발행하기</button>
+        </section>
 
         <section>
             <h2 class="section-header">최신 뉴스 피드</h2>
             <div class="news-grid" id="newsGrid">
-                <!-- 뉴스 아이템들이 여기에 동적으로 들어갑니다 -->
                 <div style="grid-column: 1/-1; text-align: center; padding: 50px; color: #999;">
                     뉴스를 불러오고 있습니다...
                 </div>
@@ -361,7 +378,7 @@
         import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js";
         import { getFirestore, collection, addDoc, getDocs, query, orderBy, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
 
-        // Firebase 설정 (사용자님의 설정값)
+        // Firebase 설정
         const firebaseConfig = {
             apiKey: "AIzaSyDOu8jfgNproVHenknRdsG-HPScyFMdO0k",
             authDomain: "joygonews318.firebaseapp.com",
@@ -372,7 +389,6 @@
             measurementId: "G-YGPH1T655Y"
         };
 
-        // 초기화
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getFirestore(app);
@@ -382,14 +398,12 @@
         const writeSection = document.getElementById('writeSection');
         const submitNewsBtn = document.getElementById('submitNewsBtn');
 
-        // 1. 유튜브 ID 추출 함수
         function getYoutubeID(url) {
             const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
             const match = url.match(regExp);
             return (match && match[2].length === 11) ? match[2] : null;
         }
 
-        // 2. 뉴스 업로드 함수
         window.uploadNews = async () => {
             const title = document.getElementById('newsTitle').value;
             const url = document.getElementById('newsYoutube').value;
@@ -410,18 +424,16 @@
                     createdAt: serverTimestamp()
                 });
                 showToast("뉴스가 발행되었습니다!");
-                // 입력창 초기화
                 document.getElementById('newsTitle').value = '';
                 document.getElementById('newsYoutube').value = '';
                 document.getElementById('newsContent').value = '';
-                loadNews(); // 뉴스 리스트 새로고침
+                loadNews();
             } catch (e) {
                 console.error("Error:", e);
                 showToast("뉴스 발행에 실패했습니다.");
             }
         };
 
-        // 3. 뉴스 불러오기 함수
         window.loadNews = async () => {
             const newsGrid = document.getElementById('newsGrid');
             try {
@@ -464,7 +476,6 @@
             }
         };
 
-        // 4. 신고 함수
         window.reportNews = async (newsId) => {
             if (!auth.currentUser) return showToast("로그인 후 신고해주세요.");
             if (!confirm("이 게시물을 부적절한 콘텐츠로 신고하시겠습니까?")) return;
@@ -482,7 +493,6 @@
             }
         };
 
-        // 인증 상태 감시
         onAuthStateChanged(auth, (user) => {
             if (user) {
                 authContainer.innerHTML = `
@@ -491,26 +501,22 @@
                         <img src="${user.photoURL}" class="user-photo" alt="profile">
                     </div>
                 `;
-                writeSection.style.display = 'block'; // 로그인하면 글쓰기 섹션 노출
+                writeSection.style.display = 'block';
                 document.getElementById('userProfile').onclick = () => {
                     if(confirm("로그아웃 하시겠습니까?")) signOut(auth);
                 };
             } else {
                 authContainer.innerHTML = `<button class="login-btn" id="loginBtn">로그인</button>`;
-                writeSection.style.display = 'none'; // 로그아웃하면 숨김
+                writeSection.style.display = 'none';
                 document.getElementById('loginBtn').onclick = () => signInWithPopup(auth, provider);
             }
         });
 
-        // 버튼 이벤트 연결
         submitNewsBtn.addEventListener('click', window.uploadNews);
-
-        // 초기 실행
         window.loadNews();
     </script>
 
     <script>
-        // 날씨 및 기타 일반 UI 스크립트
         const WEATHER_API_KEY = 'f9588dfba7000b48e2a636ba0ded59c5';
 
         function initDate() {
