@@ -72,7 +72,7 @@
 
         @keyframes marquee {
             0 { transform: translateX(0); }
-            100% { transform: translateX(-200%); }
+            100 { transform: translateX(-200%); }
         }
 
         .header-tools { display: flex; align-items: center; gap: 15px; }
@@ -148,8 +148,9 @@
         .action-link.red:hover { color: #ff4d4d; }
 
         .reaction-bar { display: flex; gap: 10px; margin-top: 10px; }
-        .react-btn { background: var(--bg-page); border: 1px solid var(--border); padding: 4px 10px; border-radius: 15px; cursor: pointer; font-size: 12px; color: var(--text-main); display: flex; align-items: center; gap: 5px; }
+        .react-btn { background: var(--bg-page); border: 1px solid var(--border); padding: 4px 10px; border-radius: 15px; cursor: pointer; font-size: 12px; color: var(--text-main); display: flex; align-items: center; gap: 5px; transition: all 0.2s; }
         .react-btn:hover { border-color: var(--joygo-blue); }
+        .react-btn.active { background: var(--joygo-blue); color: white; border-color: var(--joygo-blue); font-weight: bold; }
 
         .reply-container { margin-left: 40px; margin-top: 10px; border-left: 2px solid var(--border); padding-left: 15px; }
         .reply-input-box { margin-top: 10px; display: none; }
@@ -242,7 +243,7 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js";
         import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js";
-        import { getFirestore, collection, addDoc, getDocs, getDoc, doc, query, orderBy, serverTimestamp, onSnapshot, updateDoc, deleteDoc, increment } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
+        import { getFirestore, collection, addDoc, getDocs, getDoc, doc, query, orderBy, serverTimestamp, onSnapshot, updateDoc, deleteDoc, increment, setDoc } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyDOu8jfgNproVHenknRdsG-HPScyFMdO0k",
@@ -261,6 +262,7 @@
         let allNews = [];
         let currentNewsId = null;
         let unsubscribeComments = null;
+        let myReactionsMap = {}; // 현재 사용자의 반응들을 저장할 맵
 
         // --- 전역 함수 등록 ---
         window.login = () => signInWithPopup(auth, provider);
@@ -348,8 +350,21 @@
         };
 
         // --- 댓글 & 답글 실시간 리스너 ---
-        function initComments(newsId) {
+        async function initComments(newsId) {
             if(unsubscribeComments) unsubscribeComments();
+            
+            // 사용자가 로그인한 상태라면 현재 글의 댓글들에 대한 사용자의 반응 정보를 미리 로드
+            if (auth.currentUser) {
+                const reactionSnap = await getDocs(query(collection(db, "news", newsId, "userReactions"), orderBy("__name__")));
+                myReactionsMap = {};
+                reactionSnap.forEach(doc => {
+                    const data = doc.data();
+                    if (data[auth.currentUser.uid]) {
+                        myReactionsMap[doc.id] = data[auth.currentUser.uid];
+                    }
+                });
+            }
+
             const list = document.getElementById('commentList');
             const q = query(collection(db, "news", newsId, "comments"), orderBy("createdAt", "asc"));
             
@@ -359,6 +374,8 @@
                 snap.docs.forEach(d => {
                     const c = d.data();
                     const isMyComment = auth.currentUser?.uid === c.uid;
+                    const myReaction = myReactionsMap[d.id]; // 'likes' or 'dislikes' or undefined
+
                     const card = document.createElement('div');
                     card.className = 'comment-card';
                     card.innerHTML = `
@@ -371,8 +388,8 @@
                         </div>
                         <div id="text-${d.id}">${c.text}</div>
                         <div class="reaction-bar">
-                            <button class="react-btn" onclick="window.reactComment('${d.id}', 'likes')">👍 ${c.likes || 0}</button>
-                            <button class="react-btn" onclick="window.reactComment('${d.id}', 'dislikes')">👎 ${c.dislikes || 0}</button>
+                            <button class="react-btn ${myReaction === 'likes' ? 'active' : ''}" onclick="window.reactComment('${d.id}', 'likes')">👍 ${c.likes || 0}</button>
+                            <button class="react-btn ${myReaction === 'dislikes' ? 'active' : ''}" onclick="window.reactComment('${d.id}', 'dislikes')">👎 ${c.dislikes || 0}</button>
                         </div>
                         <div class="comment-actions">
                             <span class="action-link" onclick="window.toggleReply('${d.id}')">답글</span>
@@ -443,10 +460,56 @@
             }
         };
 
-        window.reactComment = async (id, field) => {
+        /**
+         * Firestore를 이용한 계정 기반 반응 처리
+         */
+        window.reactComment = async (commentId, type) => {
             if(!auth.currentUser) return window.showToast("로그인이 필요합니다.");
-            const ref = doc(db, "news", currentNewsId, "comments", id);
-            await updateDoc(ref, { [field]: increment(1) });
+            
+            const uid = auth.currentUser.uid;
+            const myPrevReaction = myReactionsMap[commentId];
+            
+            const commentRef = doc(db, "news", currentNewsId, "comments", commentId);
+            const userReactionRef = doc(db, "news", currentNewsId, "userReactions", commentId);
+
+            try {
+                if (myPrevReaction === type) {
+                    // 동일한 반응 다시 누름 -> 취소
+                    await updateDoc(commentRef, { [type]: increment(-1) });
+                    await setDoc(userReactionRef, { [uid]: null }, { merge: true });
+                    delete myReactionsMap[commentId];
+                    window.showToast("취소되었습니다.");
+                } else if (myPrevReaction) {
+                    // 다른 반응 누름 -> 기존거 -1, 새거 +1
+                    await updateDoc(commentRef, { 
+                        [myPrevReaction]: increment(-1),
+                        [type]: increment(1) 
+                    });
+                    await setDoc(userReactionRef, { [uid]: type }, { merge: true });
+                    myReactionsMap[commentId] = type;
+                } else {
+                    // 처음 누름 -> +1
+                    await updateDoc(commentRef, { [type]: increment(1) });
+                    await setDoc(userReactionRef, { [uid]: type }, { merge: true });
+                    myReactionsMap[commentId] = type;
+                }
+                
+                // UI 즉시 업데이트 유도를 위해 리렌더링 필요하나, 
+                // 실시간 리스너가 comment 숫자를 바꿔주므로 버튼의 active 클래스 제어를 위해 map만 업데이트
+                // (더 깔끔한 처리를 위해 initComments가 다시 불리게 하거나 수동 DOM 조작 가능)
+                const buttons = document.querySelector(`[onclick*="reactComment('${commentId}'"]`)?.parentElement.querySelectorAll('.react-btn');
+                if (buttons) {
+                    buttons.forEach(btn => {
+                        btn.classList.remove('active');
+                        if (myReactionsMap[commentId] === 'likes' && btn.innerText.includes('👍')) btn.classList.add('active');
+                        if (myReactionsMap[commentId] === 'dislikes' && btn.innerText.includes('👎')) btn.classList.add('active');
+                    });
+                }
+
+            } catch (e) {
+                console.error(e);
+                window.showToast("반응 처리 중 오류가 발생했습니다.");
+            }
         };
 
         window.deleteComment = async (id) => {
@@ -522,8 +585,12 @@
             const container = document.getElementById('authContainer');
             if(user) {
                 container.innerHTML = `<img src="${user.photoURL}" style="width:30px; border-radius:50%; cursor:pointer" title="로그아웃" onclick="confirm('로그아웃 하시겠습니까?') && signOut(auth)">`;
+                // 로그인 시 현재 뉴스 페이지라면 댓글창 리로드하여 내 반응 표시
+                if (currentNewsId) initComments(currentNewsId);
             } else {
                 container.innerHTML = `<button onclick="window.login()" style="padding:5px 12px; background:var(--joygo-blue); color:white; border:none; border-radius:20px; cursor:pointer; font-size:12px; font-weight:bold;">로그인</button>`;
+                myReactionsMap = {};
+                if (currentNewsId) initComments(currentNewsId);
             }
         });
     </script>
@@ -561,12 +628,9 @@
         }
 
         window.addEventListener('load', () => {
-            // 초기 실행
             updateClock();
             getWeather();
-            // 1초마다 시계 업데이트
             setInterval(updateClock, 1000);
-            // 30분마다 날씨 업데이트
             setInterval(getWeather, 1800000);
         });
     </script>
