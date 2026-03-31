@@ -3,416 +3,705 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>조이고 웨더 - JoyGO News Weather</title>
+    <title>조이고 뉴스 - JoyGO News</title>
+    <link rel="icon" type="image/png" href="https://i.postimg.cc/3wVmDtDM/daunlodeu.png">
     <style>
-        /* 기본 설정 및 조이고 브랜드 컬러 */
         @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700;900&display=swap');
         
         :root {
             --joygo-blue: #6166fb;
-            --joygo-dark: #1e293b;
-            --bg-light: #f8fafc;
+            --bg-page: #f4f6f9;
+            --bg-card: #ffffff;
             --text-main: #1a1a1a;
-            --text-muted: #64748b;
-            --border: #e2e8f0;
-            --white: #ffffff;
+            --text-muted: #666;
+            --border: #e1e4e8;
+            --header-bg: #ffffff;
+            --shadow: rgba(0,0,0,0.1);
         }
 
-        * { box-sizing: border-box; }
+        [data-theme='dark'] {
+            --bg-page: #121212;
+            --bg-card: #1e1e1e;
+            --text-main: #e0e0e0;
+            --text-muted: #aaa;
+            --border: #333;
+            --header-bg: #1a1a1a;
+            --shadow: rgba(0,0,0,0.5);
+        }
+
         body { 
             margin: 0; padding: 0; 
             font-family: 'Noto Sans KR', sans-serif; 
             color: var(--text-main);
-            background-color: var(--bg-light);
-            line-height: 1.6;
+            background-color: var(--bg-page);
+            line-height: 1.5;
+            transition: background 0.3s, color 0.3s;
         }
 
-        /* 헤더 섹션 */
-        .top-accent-bar { height: 8px; background-color: var(--joygo-blue); width: 100%; }
+        #readingProgress {
+            position: fixed; top: 0; left: 0; width: 0%; height: 4px;
+            background: var(--joygo-blue); z-index: 2001; transition: width 0.1s;
+        }
+
+        .top-accent-bar { height: 10px; background-color: var(--joygo-blue); width: 100%; }
+
         header {
             padding: 15px 10%;
-            background: var(--white);
             border-bottom: 1px solid var(--border);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            position: sticky;
-            top: 0;
-            z-index: 1000;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.02);
-        }
-        .logo img { height: 35px; cursor: pointer; transition: opacity 0.2s; }
-        .logo img:hover { opacity: 0.8; }
-
-        /* 메인 레이아웃 */
-        main {
-            padding: 40px 10%;
-            max-width: 1200px;
-            margin: 0 auto;
+            background: var(--header-bg);
+            position: sticky; top: 0; z-index: 1000;
         }
 
-        .search-container {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 30px;
-        }
-        .search-container input {
-            flex: 1;
-            padding: 12px 20px;
-            border: 2px solid var(--border);
-            border-radius: 12px;
-            font-size: 16px;
-            outline: none;
-            transition: border-color 0.3s;
-        }
-        .search-container input:focus { border-color: var(--joygo-blue); }
-        .btn {
-            padding: 12px 25px;
-            border-radius: 12px;
-            border: none;
-            font-weight: 700;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-        .btn-primary { background: var(--joygo-blue); color: white; }
-        .btn-primary:hover { opacity: 0.9; transform: translateY(-1px); }
-        .btn-location { background: #e0e7ff; color: var(--joygo-blue); }
+        .header-main { display: flex; justify-content: space-between; align-items: center; gap: 20px; }
+        .logo-section { display: flex; align-items: center; gap: 15px; flex: 1; overflow: hidden; }
+        .logo img { height: 35px; cursor: pointer; flex-shrink: 0; }
 
-        /* 날씨 카드 그리드 */
-        .weather-grid {
-            display: grid;
-            grid-template-columns: 1.2fr 0.8fr;
-            gap: 25px;
-        }
-
-        .card {
-            background: var(--white);
-            border-radius: 24px;
-            padding: 35px;
-            border: 1px solid var(--border);
-            box-shadow: 0 10px 30px rgba(0,0,0,0.03);
-        }
-
-        /* 메인 날씨 디스플레이 */
-        .main-display {
-            background: linear-gradient(135deg, #6166fb 0%, #4338ca 100%);
-            color: white;
-            text-align: center;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
+        .breaking-news {
+            display: flex; align-items: center; 
+            background: var(--bg-page); padding: 5px 10px; border-radius: 20px;
+            max-width: 350px; white-space: nowrap; overflow: hidden;
             position: relative;
-            overflow: hidden;
         }
-        .main-display::before {
-            content: '';
-            position: absolute;
-            top: -50px; right: -50px;
-            width: 150px; height: 150px;
-            background: rgba(255,255,255,0.1);
-            border-radius: 50%;
+        .breaking-badge { 
+            color: #ff4d4d; font-weight: 900; font-size: 13px; 
+            padding-right: 10px; background: var(--bg-page); 
+            z-index: 2; position: relative;
         }
-
-        .city-name { font-size: 28px; font-weight: 900; margin-bottom: 5px; }
-        .weather-date { font-size: 14px; opacity: 0.8; margin-bottom: 20px; }
-        .temp-large { font-size: 100px; font-weight: 900; line-height: 1; margin: 15px 0; }
-        .weather-icon-main { width: 150px; filter: drop-shadow(0 0 20px rgba(255,255,255,0.3)); }
-        .condition-text { font-size: 22px; font-weight: 700; margin-top: -10px; }
-
-        /* 서브 디테일 */
-        .detail-grid {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 15px;
-            margin-top: 30px;
-            width: 100%;
-        }
-        .detail-item {
-            background: rgba(255,255,255,0.15);
-            padding: 15px;
-            border-radius: 16px;
-            backdrop-filter: blur(5px);
-            text-align: left;
-        }
-        .detail-label { font-size: 12px; opacity: 0.8; display: block; }
-        .detail-value { font-size: 18px; font-weight: 700; }
-
-        /* 우측 브리핑 섹션 */
-        .briefing-section {
-            display: flex;
-            flex-direction: column;
-            gap: 20px;
-        }
-        .section-tag {
-            display: inline-block;
-            background: #f1f5f9;
-            padding: 5px 12px;
-            border-radius: 20px;
-            font-size: 12px;
-            font-weight: 800;
-            color: var(--joygo-blue);
-            margin-bottom: 15px;
-        }
-        .briefing-title { font-size: 20px; font-weight: 900; margin-bottom: 15px; }
-        .briefing-content { color: var(--text-muted); font-size: 15px; }
-
-        /* 일출/일몰 시간 */
-        .sun-times {
-            display: flex;
-            justify-content: space-between;
-            margin-top: 20px;
-            padding-top: 20px;
-            border-top: 1px solid var(--border);
-        }
-        .sun-item { text-align: center; flex: 1; }
-        .sun-item span { display: block; font-size: 12px; color: var(--text-muted); }
-        .sun-item b { font-size: 16px; color: var(--joygo-dark); }
-
-        footer {
-            margin-top: 60px;
-            padding: 40px 10%;
-            border-top: 1px solid var(--border);
-            background: white;
-            text-align: center;
-            font-size: 12px;
-            color: #94a3b8;
+        .breaking-text-container { overflow: hidden; flex: 1; display: flex; z-index: 1; }
+        .breaking-text { 
+            font-size: 13px; font-weight: 500; display: inline-block;
+            animation: marquee 15s linear infinite; padding-left: 100%;
         }
 
-        /* 반응형 */
+        @keyframes marquee {
+            0% { transform: translateX(0); }
+            100% { transform: translateX(-200%); }
+        }
+
+        .header-tools { display: flex; align-items: center; gap: 15px; }
+        
+        .info-panel { 
+            display: flex; 
+            align-items: center; 
+            gap: 15px; 
+            font-size: 12px; 
+            color: var(--text-muted); 
+            background: var(--bg-page);
+            padding: 5px 15px;
+            border-radius: 10px;
+        }
+        .time-display { font-weight: 900; color: var(--joygo-blue); min-width: 70px; }
+        .date-display { font-weight: 500; }
+        .weather-display { display: flex; align-items: center; gap: 3px; font-weight: bold; }
+        .weather-icon { width: 22px; height: 22px; }
+
+        .search-container { position: relative; }
+        .search-box { position: relative; display: flex; align-items: center; }
+        .search-input { 
+            padding: 8px 15px; border-radius: 20px; border: 1px solid var(--border); 
+            background: var(--bg-page); color: var(--text-main); outline: none; width: 120px; transition: width 0.3s;
+            font-size: 13px;
+        }
+        .search-input:focus { width: 200px; border-color: var(--joygo-blue); }
+
+        .autocomplete-list {
+            position: absolute; top: 110%; left: 0; width: 220px; 
+            background: var(--bg-card); border: 1px solid var(--border);
+            border-radius: 12px; box-shadow: 0 10px 25px var(--shadow);
+            z-index: 1001; display: none; max-height: 450px; overflow-y: auto;
+            padding: 5px 0;
+        }
+        .autocomplete-header {
+            padding: 10px 15px; font-size: 11px; font-weight: bold; color: var(--joygo-blue);
+            border-bottom: 1px solid var(--border); background: var(--bg-page);
+        }
+        .autocomplete-item {
+            padding: 10px 15px; font-size: 13px; cursor: pointer;
+            border-bottom: 1px solid var(--border); transition: 0.2s;
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+            display: flex; justify-content: space-between; align-items: center;
+        }
+        .autocomplete-item:last-child { border-bottom: none; }
+        .autocomplete-item:hover { background: var(--bg-page); color: var(--joygo-blue); }
+        .item-rank { font-weight: bold; margin-right: 8px; color: var(--joygo-blue); min-width: 15px; }
+        .item-meta { font-size: 10px; color: var(--text-muted); }
+
+        .theme-toggle {
+            background: none; border: 1px solid var(--border); color: var(--text-main);
+            padding: 5px 10px; border-radius: 15px; cursor: pointer; font-size: 11px;
+        }
+
+        nav ul { display: flex; gap: 25px; list-style: none; padding: 15px 0 0 0; margin: 0; }
+        nav ul li a { font-size: 16px; font-weight: 700; cursor: pointer; color: var(--text-main); text-decoration: none; }
+        nav ul li a.active { color: var(--joygo-blue); }
+
+        main { padding: 30px 10%; max-width: 1200px; margin: 0 auto; min-height: 80vh; }
+
+        .news-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 25px; }
+        .news-item {
+            background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; 
+            overflow: hidden; transition: 0.2s; cursor: pointer; display: flex; flex-direction: column;
+        }
+        .news-item:hover { transform: translateY(-5px); box-shadow: 0 10px 20px rgba(0,0,0,0.1); }
+        .video-wrapper { position: relative; padding-bottom: 56.25%; background: #000; pointer-events: none; }
+        .video-wrapper iframe { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
+        .news-info { padding: 15px; flex: 1; }
+        .news-info h3 { margin: 0 0 8px 0; font-size: 16px; color: var(--text-main); }
+        .read-time-badge { font-size: 11px; color: var(--joygo-blue); font-weight: bold; margin-bottom: 8px; display: block; }
+        .news-info p { font-size: 13px; color: var(--text-muted); -webkit-line-clamp: 2; display: -webkit-box; -webkit-box-orient: vertical; overflow: hidden; }
+
+        #detailView { display: none; }
+        .detail-video { width: 100%; aspect-ratio: 16/9; background: #000; border-radius: 12px; overflow: hidden; margin: 20px 0; }
+        .detail-content { font-size: 17px; line-height: 1.8; white-space: pre-wrap; margin-bottom: 40px; }
+        .detail-read-info { background: var(--bg-page); padding: 10px 15px; border-radius: 8px; font-size: 14px; margin-bottom: 20px; border-left: 4px solid var(--joygo-blue); }
+        
+        .share-section { display: flex; gap: 10px; margin: 20px 0; padding: 15px; background: var(--bg-card); border-radius: 8px; border: 1px solid var(--border); }
+        .share-btn { border: none; padding: 8px 15px; border-radius: 5px; cursor: pointer; font-weight: bold; font-size: 12px; }
+        .share-copy { background: #eee; color: #333; }
+        .share-tw { background: #1da1f2; color: white; }
+
+        .comment-section { margin-top: 50px; border-top: 2px solid var(--border); padding-top: 30px; }
+        .comment-input-box { margin-bottom: 30px; }
+        .comment-input { width: 100%; background: var(--bg-page); border: 1px solid var(--border); color: var(--text-main); padding: 15px; border-radius: 10px; box-sizing: border-box; resize: none; }
+        
+        .comment-card { border-bottom: 1px solid var(--border); padding: 20px 0; position: relative; }
+        .comment-header { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+        .comment-user-img { width: 30px; height: 30px; border-radius: 50%; }
+        .comment-name { font-weight: 700; font-size: 14px; }
+        .comment-date { font-size: 11px; color: var(--text-muted); }
+        .comment-actions { display: flex; gap: 15px; margin-top: 10px; font-size: 12px; }
+        .action-link { cursor: pointer; color: var(--text-muted); transition: 0.2s; }
+        .action-link:hover { color: var(--joygo-blue); }
+        .action-link.red:hover { color: #ff4d4d; }
+
+        .reply-container { margin-left: 40px; margin-top: 10px; border-left: 2px solid var(--border); padding-left: 15px; }
+        .reply-input-box { margin-top: 10px; display: none; }
+
+        #toast { position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%); background: #333; color: #fff; padding: 10px 25px; border-radius: 25px; z-index: 3000; display: none; }
+
+        @media (max-width: 1100px) {
+            .info-panel { display: none; }
+        }
         @media (max-width: 900px) {
-            .weather-grid { grid-template-columns: 1fr; }
-            main { padding: 20px 5%; }
+            .header-main { flex-wrap: wrap; }
+            .breaking-news { order: 3; max-width: 100%; width: 100%; margin-top: 10px; }
         }
     </style>
-</head>
-<body>
 
-<div class="top-accent-bar"></div>
-
-<header>
-    <div class="logo">
-        <!-- 배너 이미지 클릭 시 조이고 뉴스 홈페이지로 이동하도록 수정 -->
-        <a href="https://www.joygonews.uk"><img src="https://i.postimg.cc/PrK5Ysh4/joygo-logo-qenyzfo8a6cul319bqetl2et0yfhgwizrrfan2szcw.png" alt="JoyGO News Weather"></a>
-    </div>
-    <div id="headerTime" style="font-size: 14px; font-weight: bold; color: var(--joygo-blue);"></div>
-</header>
-
-<main>
-    <div class="search-container">
-        <input type="text" id="cityInput" placeholder="도시 이름을 입력하세요 (예: Seoul, Tokyo, London)">
-        <button class="btn btn-primary" onclick="searchWeather()">조회</button>
-        <button class="btn btn-location" onclick="getLocationWeather()">📍 내 위치</button>
-    </div>
-
-    <div class="weather-grid">
-        <!-- 왼쪽: 메인 날씨 카드 -->
-        <div class="card main-display" id="mainCard">
-            <div class="city-name" id="cityName">데이터를 불러오는 중...</div>
-            <div class="weather-date" id="currentDate">--년 --월 --일</div>
-            
-            <div id="weatherIconContainer">
-                <img src="" class="weather-icon-main" id="mainIcon" style="display:none;">
-            </div>
-            
-            <div class="temp-large"><span id="mainTemp">--</span>°</div>
-            <div class="condition-text" id="weatherDesc">날씨 상태 대기 중</div>
-
-            <div class="detail-grid">
-                <div class="detail-item">
-                    <span class="detail-label">체감 온도</span>
-                    <span class="detail-value"><span id="feelsLike">--</span>°C</span>
-                </div>
-                <div class="detail-item">
-                    <span class="detail-label">습도</span>
-                    <span class="detail-value"><span id="humidity">--</span>%</span>
-                </div>
-                <div class="detail-item">
-                    <span class="detail-label">풍속</span>
-                    <span class="detail-value"><span id="windSpeed">--</span> m/s</span>
-                </div>
-                <div class="detail-item">
-                    <span class="detail-label">구름량</span>
-                    <span class="detail-value"><span id="clouds">--</span>%</span>
-                </div>
-            </div>
-        </div>
-
-        <!-- 오른쪽: 생활 정보 및 기타 -->
-        <div class="briefing-section">
-            <div class="card">
-                <span class="section-tag">JOYGO BRIEFING</span>
-                <div class="briefing-title">오늘의 생활 기상 지수</div>
-                <div class="briefing-content" id="lifeAdvice">
-                    날씨 데이터를 기반으로 조이고 뉴스가 분석 중입니다.
-                </div>
-                
-                <div class="sun-times">
-                    <div class="sun-item">
-                        <span>일출</span>
-                        <b id="sunriseTime">--:--</b>
-                    </div>
-                    <div class="sun-item">
-                        <span>일몰</span>
-                        <b id="sunsetTime">--:--</b>
-                    </div>
-                </div>
-            </div>
-
-            <div class="card">
-                <div class="briefing-title" style="font-size: 16px;">관심 지역 기온</div>
-                <div style="font-size: 14px; color: var(--text-muted);">
-                    <div style="display:flex; justify-content:space-between; margin-bottom:10px;">
-                        <span>서울 (Seoul)</span>
-                        <b id="sideSeoul">--°</b>
-                    </div>
-                    <div style="display:flex; justify-content:space-between; margin-bottom:10px;">
-                        <span>부산 (Busan)</span>
-                        <b id="sideBusan">--°</b>
-                    </div>
-                    <div style="display:flex; justify-content:space-between;">
-                        <span>제주 (Jeju)</span>
-                        <b id="sideJeju">--°</b>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-</main>
-
-<footer>
-    <b>㈜겨벌랑</b> | 조이고 웨더 서비스 본부 <br>
-    본 서비스는 <b>OpenWeatherMap API</b>의 실시간 데이터를 사용합니다. <br>
-    Copyright © Joygo News Weather. All rights reserved.
-</footer>
-
-<script>
-    const API_KEY = 'f9588dfba7000b48e2a636ba0ded59c5';
-
-    // 시간 및 날짜 초기화
-    function updateDateTime() {
-        const now = new Date();
-        const options = { year: 'numeric', month: 'long', day: 'numeric', weekday: 'short' };
-        document.getElementById('currentDate').innerText = now.toLocaleDateString('ko-KR', options);
-        document.getElementById('headerTime').innerText = now.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' });
-    }
-
-    // 시간 포맷팅 (Unix to HH:MM)
-    function formatUnixTime(unix) {
-        const date = new Date(unix * 1000);
-        return date.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', hour12: false });
-    }
-
-    // 생활 조언 생성기
-    function setLifeAdvice(temp, desc, humidity) {
-        let advice = "";
-        if (temp > 28) advice = "폭염이 우려됩니다. 야외 활동을 자제하고 수분을 충분히 섭취하세요. 🍦";
-        else if (temp < 0) advice = "강추위가 기승을 부립니다. 내복과 두꺼운 외투는 필수입니다! 🧤";
-        else if (desc.includes('비')) advice = "비가 내리고 있습니다. 가시거리가 짧으니 운전 조심하시고 우산 꼭 챙기세요. ☔";
-        else if (humidity > 70) advice = "습도가 높아 불쾌지수가 상승할 수 있습니다. 실내 제습에 신경 써주세요. 💧";
-        else advice = "전반적으로 쾌적한 날씨입니다. 가벼운 산책으로 기분 전환 어떠신가요? 😊";
-        
-        document.getElementById('lifeAdvice').innerText = advice;
-    }
-
-    // 날씨 렌더링
-    async function fetchWeather(city) {
+    <!-- 모바일 접속 감지 후 모바일 도메인으로 리다이렉트 -->
+    <script>
+      (function(){
         try {
-            const url = `https://api.openweathermap.org/data/2.5/weather?q=${city}&appid=${API_KEY}&units=metric&lang=kr`;
-            const response = await fetch(url);
-            const data = await response.json();
+          // 모바일 User-Agent 판단
+          var isMobileUA = /Android|webOS|iPhone|iPod|Opera Mini|IEMobile|BlackBerry|Mobile/i.test(navigator.userAgent);
+          // iPad Pro / iPad with touch can show as Mac in newer Safari; detect via touch points
+          var isiPadTouch = /iPad/.test(navigator.userAgent) && navigator.maxTouchPoints && navigator.maxTouchPoints > 1;
+          // 화면 크기 보조 판단 (너비/높이 중 큰 값)
+          var isSmallScreen = (typeof screen !== 'undefined') && Math.max(screen.width, screen.height) <= 800;
+          var isMobile = isMobileUA || isiPadTouch || isSmallScreen;
 
-            if (!data || data.cod !== 200) {
-                console.warn(`City not found: ${city}`);
-                if (city !== 'Seoul') alert("도시를 찾을 수 없습니다. (영문으로 입력해보세요)");
+          // 이미 모바일 도메인으로 접속했으면 중복 리다이렉트 방지
+          if (isMobile && !/^m\./i.test(location.hostname)) {
+            var target = 'https://m.joygonews.uk' + location.pathname + location.search + location.hash;
+            // replace를 사용해 히스토리 기록을 남기지 않음
+            location.replace(target);
+          }
+        } catch (e) {
+          // 실패해도 사용자 경험에 영향주지 않음
+          console.error('mobile-redirect error', e);
+        }
+      })();
+    </script>
+</head>
+<body data-theme="light">
+
+    <div id="readingProgress"></div>
+    <div class="top-accent-bar"></div>
+
+    <header>
+        <div class="header-main">
+            <div class="logo-section">
+                <div class="logo" onclick="location.hash = '#'">
+                    <img src="https://i.postimg.cc/PrK5Ysh4/joygo-logo-qenyzfo8a6cul319bqetl2et0yfhgwizrrfan2szcw.png" alt="JoyGO Logo">
+                </div>
+                <div class="breaking-news">
+                    <span class="breaking-badge">[속보]</span>
+                    <div class="breaking-text-container">
+                        <span class="breaking-text" id="breakingTicker">조이고 뉴스에 오신 것을 환영합니다!</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="header-tools">
+                <div class="info-panel">
+                    <div id="realTimeClock" class="time-display">00:00:00</div>
+                    <div id="realTimeDate" class="date-display">0000. 0. 0.</div>
+                    <div id="weatherDisplay" class="weather-display">로딩 중..</div>
+                </div>
+                <div class="search-container" id="searchContainer">
+                    <div class="search-box">
+                        <input type="text" id="searchInput" class="search-input" placeholder="뉴스 검색..." autocomplete="off">
+                    </div>
+                    <div id="autocompleteList" class="autocomplete-list"></div>
+                </div>
+                <button class="theme-toggle" id="themeToggle">🌙 다크모드</button>
+                <div id="authContainer"></div>
+            </div>
+        </div>
+        <nav>
+            <ul>
+                <li><a onclick="location.hash = '#'" id="navHome" class="active">홈</a></li>
+                <li><a href="https://www.joygonews.uk/jebo" target="_blank">제보</a></li>
+                <li><a href="https://www.joygonews.uk/weather" target="_blank">날씨</a></li>
+                <li><a href="https://padlet.com/koreacomsearch/padlet-2ik5nqjo7y4q1qoh" target="_blank">게시판</a></li>
+            </ul>
+        </nav>
+    </header>
+
+    <main>
+        <section id="listView">
+            <div id="searchResultTitle" style="display:none; margin-bottom:20px;">
+                <h2 id="searchText"></h2>
+                <button onclick="location.hash='#'" style="border:none; background:none; color:var(--joygo-blue); cursor:pointer; font-weight:bold;">전체보기로 돌아가기</button>
+            </div>
+            <div class="news-grid" id="newsGrid"></div>
+        </section>
+
+        <section id="detailView">
+            <button onclick="location.hash='#'" style="cursor:pointer; background:none; border:1px solid var(--border); color:var(--text-main); padding:5px 10px; border-radius:5px;">← 뒤로가기</button>
+            <div id="detailArea"></div>
+            
+            <div class="share-section">
+                <span style="font-weight:bold; font-size:14px; margin-right:10px; align-self:center;">공유하기:</span>
+                <button class="share-btn share-copy" onclick="window.copyLink()">🔗 링크 복사</button>
+                <button class="share-btn share-tw" onclick="window.shareTwitter()">𝕏 트위터</button>
+            </div>
+
+            <div class="comment-section">
+                <h3>댓글 <span id="commentCount">0</span></h3>
+                <div class="comment-input-box">
+                    <textarea id="commentInput" class="comment-input" placeholder="로그인 후 의견을 남겨주세요." rows="3"></textarea>
+                    <button onclick="window.submitComment()" style="float:right; margin-top:10px; padding:10px 20px; background:var(--joygo-blue); color:white; border:none; border-radius:5px; cursor:pointer;">등록</button>
+                </div>
+                <div id="commentList" style="clear:both; margin-top:50px;"></div>
+            </div>
+        </section>
+    </main>
+
+    <div id="toast"></div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js";
+        import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js";
+        import { getFirestore, collection, addDoc, getDocs, getDoc, doc, query, orderBy, serverTimestamp, onSnapshot, updateDoc, deleteDoc, increment } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
+        
+        const firebaseConfig = {
+            apiKey: "AIzaSyDOu8jfgNproVHenknRdsG-HPScyFMdO0k",
+            authDomain: "joygonews318.firebaseapp.com",
+            projectId: "joygonews318",
+            storageBucket: "joygonews318.firebasestorage.app",
+            messagingSenderId: "18066193272",
+            appId: "1:18066193272:web:8a5e0e8e8a82d3e870e68d"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+        const provider = new GoogleAuthProvider();
+
+        let allNews = [];
+        let currentNewsId = null;
+        let unsubscribeComments = null;
+
+        function calculateReadTime(text) {
+            if (!text) return 1;
+            const wordsPerMinute = 500;
+            const minutes = Math.ceil(text.length / wordsPerMinute);
+            return minutes;
+        }
+
+        window.login = () => signInWithPopup(auth, provider);
+        window.showToast = (m) => {
+            const t = document.getElementById('toast');
+            t.innerText = m; t.style.display='block';
+            setTimeout(()=>t.style.display='none', 2000);
+        };
+
+        const themeToggle = document.getElementById('themeToggle');
+        themeToggle.onclick = () => {
+            const current = document.body.getAttribute('data-theme');
+            const target = current === 'light' ? 'dark' : 'light';
+            document.body.setAttribute('data-theme', target);
+            themeToggle.innerText = target === 'light' ? '🌙 다크모드' : '☀️ 라이트모드';
+            localStorage.setItem('theme', target);
+        };
+        if(localStorage.getItem('theme') === 'dark') {
+            document.body.setAttribute('data-theme', 'dark');
+            themeToggle.innerText = '☀️ 라이트모드';
+        }
+
+        window.loadNewsData = async (filterKeyword = "") => {
+            const grid = document.getElementById('newsGrid');
+            grid.innerHTML = '<p>뉴스를 불러오는 중입니다...</p>';
+            try {
+                const q = query(collection(db, "news"), orderBy("createdAt", "desc"));
+                const snap = await getDocs(q);
+                allNews = snap.docs.map(d => ({id: d.id, ...d.data()}));
+                if(allNews.length > 0) document.getElementById('breakingTicker').innerText = allNews[0].title;
+                renderNewsList(filterKeyword);
+            } catch(e) { console.error(e); grid.innerHTML = '<p>뉴스를 불러오지 못했습니다.</p>'; }
+        };
+
+        function renderNewsList(keyword = "") {
+            const grid = document.getElementById('newsGrid');
+            const resultTitle = document.getElementById('searchResultTitle');
+            grid.innerHTML = '';
+            let filtered = allNews;
+            if(keyword) {
+                filtered = allNews.filter(n => (n.title && n.title.toLowerCase().includes(keyword.toLowerCase())) || (n.content && n.content.toLowerCase().includes(keyword.toLowerCase())));
+                resultTitle.style.display = 'block';
+                document.getElementById('searchText').innerText = `'${keyword}' 검색 결과 (${filtered.length})`;
+            } else {
+                resultTitle.style.display = 'none';
+            }
+            if(filtered.length === 0) {
+                grid.innerHTML = '<p>표시할 뉴스가 없습니다.</p>';
                 return;
             }
-
-            // 메인 데이터 매핑
-            document.getElementById('cityName').innerText = `${data.name}, ${data.sys.country}`;
-            document.getElementById('mainTemp').innerText = Math.round(data.main.temp);
-            document.getElementById('weatherDesc').innerText = data.weather[0].description;
-            document.getElementById('feelsLike').innerText = Math.round(data.main.feels_like);
-            document.getElementById('humidity').innerText = data.main.humidity;
-            document.getElementById('windSpeed').innerText = data.wind.speed;
-            document.getElementById('clouds').innerText = data.clouds.all;
-            
-            // 아이콘 설정
-            const iconImg = document.getElementById('mainIcon');
-            iconImg.src = `https://openweathermap.org/img/wn/${data.weather[0].icon}@4x.png`;
-            iconImg.style.display = 'block';
-
-            // 일출/일몰
-            document.getElementById('sunriseTime').innerText = formatUnixTime(data.sys.sunrise);
-            document.getElementById('sunsetTime').innerText = formatUnixTime(data.sys.sunset);
-
-            // 어드바이스
-            setLifeAdvice(data.main.temp, data.weather[0].description, data.main.humidity);
-
-        } catch (error) {
-            console.error("Main Weather Fetch Error:", error);
+            filtered.forEach(news => {
+                const readTime = calculateReadTime(news.content || "");
+                const card = document.createElement('div');
+                card.className = 'news-item';
+                card.onclick = () => location.hash = `#/news/${news.id}`;
+                const ytId = news.youtubeId || '';
+                card.innerHTML = `
+                    <div class="video-wrapper"><iframe src="https://www.youtube.com/embed/${ytId}?controls=0" frameborder="0" allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe></div>
+                    <div class="news-info">
+                        <div style="display:flex; justify-content:space-between; align-items:center;">
+                            <span class="read-time-badge">⏱️ 약 ${readTime}분 분량</span>
+                            <span style="font-size:11px; color:var(--text-muted);">조회수 ${news.views || 0}회</span>
+                        </div>
+                        <h3>${news.title || ''}</h3>
+                        <p>${news.content ? (news.content.length > 200 ? news.content.substring(0,200) + '...' : news.content) : ''}</p>
+                    </div>
+                `;
+                grid.appendChild(card);
+            });
         }
-    }
 
-    // 사이드바 주요 도시 날씨 요약 (에러 수정됨)
-    async function fetchSideCities() {
-        const cities = { 'Seoul': 'sideSeoul', 'Busan': 'sideBusan', 'Jeju': 'sideJeju' };
-        for (const [city, elementId] of Object.entries(cities)) {
-            try {
-                const url = `https://api.openweathermap.org/data/2.5/weather?q=${city}&appid=${API_KEY}&units=metric`;
-                const res = await fetch(url);
-                const data = await res.json();
-                
-                if (data && data.main && data.main.temp !== undefined) {
-                    document.getElementById(elementId).innerText = `${Math.round(data.main.temp)}°`;
-                } else {
-                    document.getElementById(elementId).innerText = "N/A";
+        window.showDetail = async (id) => {
+            currentNewsId = id;
+            document.getElementById('listView').style.display = 'none';
+            document.getElementById('detailView').style.display = 'block';
+            window.scrollTo(0,0);
+            const area = document.getElementById('detailArea');
+            area.innerHTML = '상세 내용을 불러오는 중...';
+            
+            const newsRef = doc(db, "news", id);
+            
+            if (!sessionStorage.getItem(`viewed_${id}`)) {
+                try {
+                    await updateDoc(newsRef, { views: increment(1) });
+                    sessionStorage.setItem(`viewed_${id}`, 'true');
+                } catch(e) { console.error("조회수 업데이트 오류:", e); }
+            }
+
+            const snap = await getDoc(newsRef);
+            if(snap.exists()) {
+                const data = snap.data();
+                const readTime = calculateReadTime(data.content || "");
+                const viewCount = data.views || 0;
+                area.innerHTML = `
+                    <h1 style="font-size:28px; margin-top:20px; line-height:1.4;">${data.title || ''}</h1>
+                    <p style="color:var(--text-muted); font-size:13px;">작성자: ${data.author || '익명'} | ${data.createdAt ? new Date(data.createdAt.seconds*1000).toLocaleString() : ''} | 조회수 ${viewCount}회</p>
+                    <div class="detail-read-info">
+                        ✨ <b>이 기사는 읽는 데 약 ${readTime}분 정도 소요됩니다.</b> 편안하게 감상해 보세요!
+                    </div>
+                    <div class="detail-video">
+                        <iframe width="100%" height="100%" src="https://www.youtube.com/embed/${data.youtubeId}" frameborder="0" allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
+                    </div>
+                    <div class="detail-content">${data.content || ''}</div>
+                `;
+                initComments(id);
+            } else {
+                area.innerHTML = '<p>해당 뉴스가 존재하지 않습니다.</p>';
+            }
+        };
+
+        const searchInput = document.getElementById('searchInput');
+        const autocompleteList = document.getElementById('autocompleteList');
+
+        // 인기 리스트 렌더링 함수
+        function renderPopularList() {
+            autocompleteList.innerHTML = '<div class="autocomplete-header">🔥 인기 뉴스 TOP 10</div>';
+            // 조회수 기준 내림차순 정렬하여 상위 10개만 추출
+            const popularNews = [...allNews].sort((a, b) => (b.views || 0) - (a.views || 0)).slice(0, 10);
+            
+            popularNews.forEach((m, index) => {
+                const item = document.createElement('div');
+                item.className = 'autocomplete-item';
+                item.innerHTML = `
+                    <span style="overflow:hidden; text-overflow:ellipsis; display:inline-block; max-width:160px;">
+                        <span class="item-rank">${index + 1}</span>${m.title || ''}
+                    </span>
+                    <span class="item-meta">${m.views || 0}회</span>
+                `;
+                item.onclick = () => {
+                    searchInput.value = m.title || '';
+                    autocompleteList.style.display = 'none';
+                    location.hash = `#/news/${m.id}`;
+                };
+                autocompleteList.appendChild(item);
+            });
+            autocompleteList.style.display = 'block';
+        }
+
+        // 검색창 포커스(클릭) 이벤트
+        searchInput.addEventListener('focus', () => {
+            if (!searchInput.value.trim()) {
+                renderPopularList();
+            }
+        });
+
+        // 입력 시 자동완성 이벤트
+        searchInput.addEventListener('input', (e) => {
+            const val = e.target.value.trim().toLowerCase();
+            autocompleteList.innerHTML = '';
+            if (!val) {
+                renderPopularList(); // 입력값이 없으면 다시 인기 리스트 표시
+                return;
+            }
+            const matches = allNews.filter(n => n.title && n.title.toLowerCase().includes(val)).slice(0, 8);
+            if (matches.length > 0) {
+                autocompleteList.innerHTML = '<div class="autocomplete-header">🔍 검색 결과</div>';
+                matches.forEach(m => {
+                    const item = document.createElement('div');
+                    item.className = 'autocomplete-item';
+                    item.innerText = m.title;
+                    item.onclick = () => {
+                        searchInput.value = m.title || '';
+                        autocompleteList.style.display = 'none';
+                        location.hash = `#/news/${m.id}`;
+                    };
+                    autocompleteList.appendChild(item);
+                });
+                autocompleteList.style.display = 'block';
+            } else {
+                autocompleteList.style.display = 'none';
+            }
+        });
+
+        document.addEventListener('click', (e) => {
+            if (!document.getElementById('searchContainer').contains(e.target)) {
+                autocompleteList.style.display = 'none';
+            }
+        });
+
+        searchInput.onkeypress = (e) => {
+            if(e.key === 'Enter') {
+                const keyword = searchInput.value.trim();
+                if(keyword) {
+                    autocompleteList.style.display = 'none';
+                    location.hash = `#/search/${encodeURIComponent(keyword)}`;
                 }
-            } catch (err) {
-                console.error(`Side city fetch error (${city}):`, err);
-                document.getElementById(elementId).innerText = "Err";
+            }
+        };
+
+        async function initComments(newsId) {
+            if(unsubscribeComments) unsubscribeComments();
+            const list = document.getElementById('commentList');
+            const q = query(collection(db, "news", newsId, "comments"), orderBy("createdAt", "asc"));
+            unsubscribeComments = onSnapshot(q, (snap) => {
+                document.getElementById('commentCount').innerText = snap.size;
+                list.innerHTML = '';
+                snap.docs.forEach(d => {
+                    const c = d.data();
+                    const isMyComment = auth.currentUser?.uid === c.uid;
+                    const card = document.createElement('div');
+                    card.className = 'comment-card';
+                    // escape single quotes for inline handlers
+                    const escapedText = (c.text || '').replace(/'/g, "\\'");
+                    card.innerHTML = `
+                        <div class="comment-header">
+                            <img src="${c.userImg || 'https://via.placeholder.com/30'}" class="comment-user-img" alt="user">
+                            <div>
+                                <span class="comment-name">${c.userName || '익명'}</span>
+                                <div class="comment-date">${c.createdAt ? new Date(c.createdAt.seconds*1000).toLocaleString() : '방금 전'}</div>
+                            </div>
+                        </div>
+                        <div id="text-${d.id}">${c.text || ''}</div>
+                        <div class="comment-actions">
+                            <span class="action-link" onclick="window.toggleReply('${d.id}')">답글</span>
+                            ${isMyComment ? `<span class="action-link" onclick="window.editComment('${d.id}', '${escapedText}')">수정</span>` : ''}
+                            ${isMyComment ? `<span class="action-link red" onclick="window.deleteComment('${d.id}')">삭제</span>` : ''}
+                            <span class="action-link red" onclick="window.reportComment('${d.id}')">신고</span>
+                        </div>
+                        <div id="reply-box-${d.id}" class="reply-input-box">
+                            <textarea id="reply-input-${d.id}" class="comment-input" placeholder="답글을 남겨주세요." rows="2"></textarea>
+                            <button onclick="window.submitReply('${d.id}')" style="margin-top:5px; padding:5px 15px; background:var(--joygo-blue); color:white; border:none; border-radius:5px; cursor:pointer;">답글 등록</button>
+                        </div>
+                        <div id="replies-${d.id}" class="reply-container"></div>
+                    `;
+                    list.appendChild(card);
+                    loadReplies(newsId, d.id);
+                });
+            });
+        }
+
+        async function loadReplies(newsId, commentId) {
+            const replyList = document.getElementById(`replies-${commentId}`);
+            const q = query(collection(db, "news", newsId, "comments", commentId, "replies"), orderBy("createdAt", "asc"));
+            onSnapshot(q, (snap) => {
+                if(!replyList) return;
+                replyList.innerHTML = snap.docs.map(rd => {
+                    const r = rd.data();
+                    return `
+                        <div style="font-size:13px; margin-bottom:10px; padding:5px 0; border-bottom: 1px dashed var(--border);">
+                            <strong>${r.userName || '익명'}</strong>: ${r.text || ''} 
+                            <small style="color:gray; margin-left:5px">${r.createdAt ? new Date(r.createdAt.seconds*1000).toLocaleTimeString() : '방금 전'}</small>
+                        </div>
+                    `;
+                }).join('');
+            });
+        }
+
+        window.submitComment = async () => {
+            if(!auth.currentUser) return window.showToast("로그인이 필요합니다.");
+            const input = document.getElementById('commentInput');
+            const text = input.value.trim();
+            if(!text) return;
+            try {
+                await addDoc(collection(db, "news", currentNewsId, "comments"), {
+                    text: text, uid: auth.currentUser.uid, userName: auth.currentUser.displayName || '익명', userImg: auth.currentUser.photoURL || '',
+                    createdAt: serverTimestamp()
+                });
+                input.value = '';
+                window.showToast("댓글이 등록되었습니다.");
+            } catch(e) { console.error(e); window.showToast("등록 실패"); }
+        };
+
+        window.submitReply = async (commentId) => {
+            if(!auth.currentUser) return window.showToast("로그인이 필요합니다.");
+            const input = document.getElementById(`reply-input-${commentId}`);
+            if(!input) return;
+            const text = input.value.trim();
+            if(!text) return;
+            try {
+                await addDoc(collection(db, "news", currentNewsId, "comments", commentId, "replies"), {
+                    text: text, uid: auth.currentUser.uid, userName: auth.currentUser.displayName || '익명', createdAt: serverTimestamp()
+                });
+                input.value = '';
+                window.toggleReply(commentId);
+                window.showToast("답글이 등록되었습니다.");
+            } catch(e) { console.error(e); window.showToast("답글 등록 실패"); }
+        };
+
+        window.deleteComment = async (id) => {
+            if(confirm("댓글을 삭제하시겠습니까?")) {
+                try {
+                    await deleteDoc(doc(db, "news", currentNewsId, "comments", id));
+                    window.showToast("삭제되었습니다.");
+                } catch(e) { console.error(e); window.showToast("삭제 실패"); }
+            }
+        };
+
+        window.editComment = async (id, oldText) => {
+            const newText = prompt("댓글 수정:", oldText);
+            if(newText !== null && newText !== oldText) {
+                try {
+                    await updateDoc(doc(db, "news", currentNewsId, "comments", id), { text: newText });
+                    window.showToast("수정되었습니다.");
+                } catch(e) { console.error(e); window.showToast("수정 실패"); }
+            }
+        };
+
+        window.toggleReply = (id) => {
+            const box = document.getElementById(`reply-box-${id}`);
+            if(box) box.style.display = box.style.display === 'block' ? 'none' : 'block';
+        };
+
+        window.reportComment = (id) => {
+            alert("신고가 접수되었습니다. 검토 후 처리하겠습니다.");
+        };
+
+        window.copyLink = () => {
+            const url = window.location.href;
+            const dummy = document.createElement('input');
+            document.body.appendChild(dummy);
+            dummy.value = url; dummy.select();
+            document.execCommand('copy');
+            document.body.removeChild(dummy);
+            window.showToast("링크가 복사되었습니다!");
+        };
+
+        window.shareTwitter = () => {
+            const text = "조이고 뉴스에서 이 소식을 확인해보세요!";
+            window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(window.location.href)}`, '_blank');
+        };
+
+        function handleRoute() {
+            const hash = window.location.hash;
+            if(hash.startsWith('#/news/')) {
+                window.showDetail(hash.replace('#/news/', ''));
+            } else if(hash.startsWith('#/search/')) {
+                document.getElementById('listView').style.display = 'block';
+                document.getElementById('detailView').style.display = 'none';
+                window.loadNewsData(decodeURIComponent(hash.replace('#/search/', '')));
+            } else {
+                document.getElementById('listView').style.display = 'block';
+                document.getElementById('detailView').style.display = 'none';
+                window.loadNewsData();
             }
         }
-    }
+        window.addEventListener('hashchange', handleRoute);
+        window.addEventListener('load', handleRoute);
 
-    function searchWeather() {
-        const city = document.getElementById('cityInput').value;
-        if (city) fetchWeather(city);
-    }
+        onAuthStateChanged(auth, (user) => {
+            const container = document.getElementById('authContainer');
+            if(user) {
+                container.innerHTML = `<img src="${user.photoURL || 'https://via.placeholder.com/30'}" style="width:30px; border-radius:50%; cursor:pointer" title="로그아웃" onclick="if(confirm('로그아웃 하시겠습니까?')) { signOut(auth).then(()=>{ window.showToast('로그아웃 되었습니다.'); }).catch(e=>console.error(e)); }">`;
+            } else {
+                container.innerHTML = `<button onclick="window.login()" style="padding:5px 12px; background:var(--joygo-blue); color:white; border:none; border-radius:20px; cursor:pointer; font-size:13px;">로그인</button>`;
+            }
+        });
+    </script>
 
-    function getLocationWeather() {
-        if (navigator.geolocation) {
-            navigator.geolocation.getCurrentPosition(async (pos) => {
-                const { latitude, longitude } = pos.coords;
-                try {
-                    const url = `https://api.openweathermap.org/data/2.5/weather?lat=${latitude}&lon=${longitude}&appid=${API_KEY}&units=metric&lang=kr`;
-                    const res = await fetch(url);
-                    const data = await res.json();
-                    if (data && data.name) fetchWeather(data.name);
-                } catch (e) {
-                    console.error("Location Fetch Error", e);
-                }
-            }, (err) => {
-                alert("위치 정보를 가져오는데 실패했습니다.");
-            });
-        } else {
-            alert("위치 정보를 지원하지 않는 브라우저입니다.");
+    <script>
+        function updateClock() {
+            const clockEl = document.getElementById('realTimeClock');
+            const dateEl = document.getElementById('realTimeDate');
+            if (!clockEl || !dateEl) return;
+            const now = new Date();
+            const h = String(now.getHours()).padStart(2, '0');
+            const m = String(now.getMinutes()).padStart(2, '0');
+            const s = String(now.getSeconds()).padStart(2, '0');
+            clockEl.innerText = `${h}:${m}:${s}`;
+            const days = ['일', '월', '화', '수', '목', '금', '토'];
+            dateEl.innerText = `${now.getFullYear()}. ${now.getMonth() + 1}. ${now.getDate()}. (${days[now.getDay()]})`;
         }
-    }
 
-    // 초기 실행
-    window.onload = () => {
-        updateDateTime();
-        setInterval(updateDateTime, 10000);
-        fetchWeather('Seoul'); // 기본값 서울
-        fetchSideCities();
-    };
+        async function getWeather() {
+            const API_KEY = 'f9588dfba7000b48e2a636ba0ded59c5';
+            const weatherEl = document.getElementById('weatherDisplay');
+            try {
+                const res = await fetch(`https://api.openweathermap.org/data/2.5/weather?q=Seoul&appid=${API_KEY}&units=metric&lang=kr`);
+                const data = await res.json();
+                if (data && data.weather && data.weather[0]) {
+                    weatherEl.innerHTML = `<img src="https://openweathermap.org/img/wn/${data.weather[0].icon}.png" class="weather-icon"> <span>${Math.round(data.main.temp)}°C 서울</span>`;
+                } else {
+                    if(weatherEl) weatherEl.innerText = "날씨 정보 없음";
+                }
+            } catch (e) { 
+                if(weatherEl) weatherEl.innerText = "날씨 정보 없음"; 
+            }
+        }
 
-    // 엔터키 검색 지원
-    document.getElementById('cityInput').addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') searchWeather();
-    });
-</script>
-
+        window.addEventListener('load', () => {
+            updateClock();
+            getWeather();
+            setInterval(updateClock, 1000);
+            setInterval(getWeather, 1800000);
+        });
+    </script>
 </body>
 </html>
