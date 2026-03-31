@@ -105,19 +105,26 @@
         .search-input:focus { width: 200px; border-color: var(--joygo-blue); }
 
         .autocomplete-list {
-            position: absolute; top: 110%; left: 0; width: 100%; 
+            position: absolute; top: 110%; left: 0; width: 220px; 
             background: var(--bg-card); border: 1px solid var(--border);
             border-radius: 12px; box-shadow: 0 10px 25px var(--shadow);
-            z-index: 1001; display: none; max-height: 300px; overflow-y: auto;
+            z-index: 1001; display: none; max-height: 450px; overflow-y: auto;
             padding: 5px 0;
+        }
+        .autocomplete-header {
+            padding: 10px 15px; font-size: 11px; font-weight: bold; color: var(--joygo-blue);
+            border-bottom: 1px solid var(--border); background: var(--bg-page);
         }
         .autocomplete-item {
             padding: 10px 15px; font-size: 13px; cursor: pointer;
             border-bottom: 1px solid var(--border); transition: 0.2s;
             white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+            display: flex; justify-content: space-between; align-items: center;
         }
         .autocomplete-item:last-child { border-bottom: none; }
         .autocomplete-item:hover { background: var(--bg-page); color: var(--joygo-blue); }
+        .item-rank { font-weight: bold; margin-right: 8px; color: var(--joygo-blue); min-width: 15px; }
+        .item-meta { font-size: 10px; color: var(--text-muted); }
 
         .theme-toggle {
             background: none; border: 1px solid var(--border); color: var(--text-main);
@@ -362,7 +369,6 @@
             
             const newsRef = doc(db, "news", id);
             
-            // 조회수 증가 처리 (세션당 1회 제한)
             if (!sessionStorage.getItem(`viewed_${id}`)) {
                 try {
                     await updateDoc(newsRef, { views: increment(1) });
@@ -393,15 +399,49 @@
         const searchInput = document.getElementById('searchInput');
         const autocompleteList = document.getElementById('autocompleteList');
 
+        // [추가] 인기 리스트 렌더링 함수
+        function renderPopularList() {
+            autocompleteList.innerHTML = '<div class="autocomplete-header">🔥 인기 뉴스 TOP 10</div>';
+            // 조회수 기준 내림차순 정렬하여 상위 10개만 추출
+            const popularNews = [...allNews].sort((a, b) => (b.views || 0) - (a.views || 0)).slice(0, 10);
+            
+            popularNews.forEach((m, index) => {
+                const item = document.createElement('div');
+                item.className = 'autocomplete-item';
+                item.innerHTML = `
+                    <span style="overflow:hidden; text-overflow:ellipsis;">
+                        <span class="item-rank">${index + 1}</span>${m.title}
+                    </span>
+                    <span class="item-meta">${m.views || 0}회</span>
+                `;
+                item.onclick = () => {
+                    searchInput.value = m.title;
+                    autocompleteList.style.display = 'none';
+                    location.hash = `#/news/${m.id}`;
+                };
+                autocompleteList.appendChild(item);
+            });
+            autocompleteList.style.display = 'block';
+        }
+
+        // 검색창 포커스(클릭) 이벤트
+        searchInput.addEventListener('focus', () => {
+            if (!searchInput.value.trim()) {
+                renderPopularList();
+            }
+        });
+
+        // 입력 시 자동완성 이벤트
         searchInput.addEventListener('input', (e) => {
             const val = e.target.value.trim().toLowerCase();
             autocompleteList.innerHTML = '';
             if (!val) {
-                autocompleteList.style.display = 'none';
+                renderPopularList(); // 입력값이 없으면 다시 인기 리스트 표시
                 return;
             }
             const matches = allNews.filter(n => n.title.toLowerCase().includes(val)).slice(0, 8);
             if (matches.length > 0) {
+                autocompleteList.innerHTML = '<div class="autocomplete-header">🔍 검색 결과</div>';
                 matches.forEach(m => {
                     const item = document.createElement('div');
                     item.className = 'autocomplete-item';
