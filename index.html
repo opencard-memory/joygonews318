@@ -150,37 +150,6 @@
             font-weight: bold;
         }
 
-        /* 글쓰기 섹션 */
-        .write-container {
-            background: #f8f9fa;
-            border: 1px solid var(--border);
-            border-radius: 12px;
-            padding: 25px;
-            margin-bottom: 40px;
-            display: none; /* 로그인 전에는 숨김 */
-        }
-        .write-container h3 { margin-top: 0; color: var(--joygo-blue); }
-        .input-group { margin-bottom: 15px; }
-        .input-group label { display: block; font-size: 13px; font-weight: bold; margin-bottom: 5px; }
-        .input-group input, .input-group textarea {
-            width: 100%;
-            padding: 12px;
-            border: 1px solid #ddd;
-            border-radius: 8px;
-            font-family: inherit;
-            box-sizing: border-box;
-        }
-        .submit-btn {
-            background: var(--joygo-blue);
-            color: white;
-            border: none;
-            padding: 12px 25px;
-            border-radius: 8px;
-            font-weight: bold;
-            cursor: pointer;
-            width: 100%;
-        }
-
         /* 네비게이션 */
         nav ul {
             display: flex;
@@ -333,7 +302,6 @@
                 <li><a href="#">실시간</a></li>
                 <li><a href="#">뉴스</a></li>
                 <li><a href="#">시사교양</a></li>
-                <!-- 제보 링크 수정 완료 -->
                 <li><a href="https://www.joygonews.uk/jebo" target="_blank">제보</a></li>
                 <li><a href="#">UN</a></li>
                 <li><a href="https://www.joygonews.uk/weather">날씨</a></li>
@@ -342,24 +310,6 @@
     </header>
 
     <main>
-        <!-- 글쓰기 섹션 (로그인 시 보임) -->
-        <section class="write-container" id="writeSection">
-            <h3>📢 새로운 뉴스 제보하기</h3>
-            <div class="input-group">
-                <label>뉴스 제목</label>
-                <input type="text" id="newsTitle" placeholder="강렬한 제목을 입력하세요">
-            </div>
-            <div class="input-group">
-                <label>유튜브 링크</label>
-                <input type="text" id="newsYoutube" placeholder="https://www.youtube.com/watch?v=...">
-            </div>
-            <div class="input-group">
-                <label>상세 내용</label>
-                <textarea id="newsContent" rows="4" placeholder="뉴스에 대한 설명을 적어주세요"></textarea>
-            </div>
-            <button class="submit-btn" id="submitNewsBtn">뉴스 발행하기</button>
-        </section>
-
         <section>
             <h2 class="section-header">최신 뉴스 피드</h2>
             <div class="news-grid" id="newsGrid">
@@ -395,44 +345,6 @@
         const provider = new GoogleAuthProvider();
 
         const authContainer = document.getElementById('authContainer');
-        const writeSection = document.getElementById('writeSection');
-        const submitNewsBtn = document.getElementById('submitNewsBtn');
-
-        function getYoutubeID(url) {
-            const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
-            const match = url.match(regExp);
-            return (match && match[2].length === 11) ? match[2] : null;
-        }
-
-        window.uploadNews = async () => {
-            const title = document.getElementById('newsTitle').value;
-            const url = document.getElementById('newsYoutube').value;
-            const content = document.getElementById('newsContent').value;
-            const videoId = getYoutubeID(url);
-
-            if (!auth.currentUser) return showToast("로그인이 필요합니다.");
-            if (!title || !videoId || !content) return showToast("모든 항목을 올바르게 입력해주세요.");
-
-            try {
-                await addDoc(collection(db, "news"), {
-                    title: title,
-                    youtubeId: videoId,
-                    content: content,
-                    author: auth.currentUser.displayName,
-                    authorUid: auth.currentUser.uid,
-                    authorPhoto: auth.currentUser.photoURL,
-                    createdAt: serverTimestamp()
-                });
-                showToast("뉴스가 발행되었습니다!");
-                document.getElementById('newsTitle').value = '';
-                document.getElementById('newsYoutube').value = '';
-                document.getElementById('newsContent').value = '';
-                loadNews();
-            } catch (e) {
-                console.error("Error:", e);
-                showToast("뉴스 발행에 실패했습니다.");
-            }
-        };
 
         window.loadNews = async () => {
             const newsGrid = document.getElementById('newsGrid');
@@ -501,18 +413,15 @@
                         <img src="${user.photoURL}" class="user-photo" alt="profile">
                     </div>
                 `;
-                writeSection.style.display = 'block';
                 document.getElementById('userProfile').onclick = () => {
                     if(confirm("로그아웃 하시겠습니까?")) signOut(auth);
                 };
             } else {
                 authContainer.innerHTML = `<button class="login-btn" id="loginBtn">로그인</button>`;
-                writeSection.style.display = 'none';
                 document.getElementById('loginBtn').onclick = () => signInWithPopup(auth, provider);
             }
         });
 
-        submitNewsBtn.addEventListener('click', window.uploadNews);
         window.loadNews();
     </script>
 
