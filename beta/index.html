@@ -38,16 +38,15 @@
             transition: background 0.3s, color 0.3s;
         }
 
-        /* [VIP] 관리자 전용 구글 4색 링 스타일 (이미지 기반 정밀 구현) */
+        /* [VIP] 관리자 전용 구글 4색 링 스타일 */
         .admin-vip-ring {
             display: inline-flex;
-            padding: 3px; /* 링의 두께 */
-            /* 구글 고유 색상 사분면 분할: 빨강, 파랑, 초록, 노랑 */
+            padding: 3px; 
             background: conic-gradient(
-                #ea4335 0deg 90deg,   /* 빨강 (상단 우측) */
-                #4285f4 90deg 180deg, /* 파랑 (하단 우측) */
-                #34a853 180deg 270deg, /* 초록 (하단 좌측) */
-                #fbbc05 270deg 360deg  /* 노랑 (상단 좌측) */
+                #ea4335 0deg 90deg,   
+                #4285f4 90deg 180deg, 
+                #34a853 180deg 270deg, 
+                #fbbc05 270deg 360deg  
             );
             border-radius: 50%;
             vertical-align: middle;
@@ -55,7 +54,7 @@
         }
         .admin-vip-ring:hover { transform: scale(1.05); }
         .admin-vip-ring img {
-            border: 2px solid var(--bg-card); /* 내부 흰색 간격 */
+            border: 2px solid var(--bg-card); 
             border-radius: 50%;
             display: block;
             background: var(--bg-card);
@@ -514,7 +513,7 @@
                     const card = document.createElement('div');
                     card.className = 'comment-card';
                     
-                    // [VIP] 관리자면 이미지 4색 분할 링 적용 (왕관 제거됨)
+                    // [VIP] 관리자면 이미지 4색 분할 링 적용
                     const userImgHtml = isAdmin 
                         ? `<div class="admin-vip-ring"><img src="${c.userImg || 'https://via.placeholder.com/30'}" class="comment-user-img" style="border:none;"></div>`
                         : `<img src="${c.userImg || 'https://via.placeholder.com/30'}" class="comment-user-img">`;
@@ -523,7 +522,7 @@
                         <div class="comment-header">
                             ${userImgHtml}
                             <div>
-                                <span class="comment-name" style="${isAdmin ? 'color:var(--joygo-blue); font-weight:900;' : ''}">${c.userName}</span>
+                                <span class="comment-name" style="${isAdmin ? 'color:var(--joygo-blue); font-weight:900;' : ''}">${isAdmin ? '관리자' : c.userName}</span>
                                 <span class="comment-date">${c.createdAt ? new Date(c.createdAt.seconds*1000).toLocaleString() : '방금 전'}</span>
                             </div>
                         </div>
@@ -556,7 +555,7 @@
                     const isReplyAdmin = r.uid === ADMIN_UID;
                     return `
                         <div style="font-size:13px; margin-bottom:10px; padding:5px 0; border-bottom: 1px dashed var(--border);">
-                            <strong style="${isReplyAdmin ? 'color:var(--joygo-blue);' : ''}">${r.userName}</strong>: ${r.text} 
+                            <strong style="${isReplyAdmin ? 'color:var(--joygo-blue);' : ''}">${isReplyAdmin ? '관리자' : r.userName}</strong>: ${r.text} 
                             <small style="color:gray; margin-left:5px">${r.createdAt ? new Date(r.createdAt.seconds*1000).toLocaleTimeString() : '방금 전'}</small>
                         </div>
                     `;
@@ -653,10 +652,10 @@
         onAuthStateChanged(auth, (user) => {
             const container = document.getElementById('authContainer');
             if(user) {
-                // [VIP] 주인님인 경우 헤더 프로필에도 4색 정품 링 적용
+                // [VIP] 주인님인 경우 헤더 프로필에도 4색 정품 링 적용 및 이름 강제 변경
                 const isOwner = user.uid === ADMIN_UID;
                 const profileImgHtml = isOwner
-                    ? `<div class="admin-vip-ring"><img src="${user.photoURL}" style="width:30px;" title="Google VIP 관리자"></div>`
+                    ? `<div class="admin-vip-ring"><img src="${user.photoURL}" style="width:30px;" title="관리자"></div>`
                     : `<img src="${user.photoURL}" style="width:30px; border-radius:50%;" title="로그아웃">`;
 
                 container.innerHTML = `<div onclick="confirm('로그아웃 하시겠습니까?') && signOut(auth)" style="cursor:pointer; display:flex; align-items:center;">${profileImgHtml}</div>`;
