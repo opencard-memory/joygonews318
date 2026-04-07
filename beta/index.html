@@ -157,8 +157,6 @@
         nav ul li a { font-size: 16px; font-weight: 700; cursor: pointer; color: var(--text-main); text-decoration: none; position: relative; }
         nav ul li a.active { color: var(--joygo-blue); }
         nav ul li a.active::after { content: ''; position: absolute; bottom: -5px; left: 0; width: 100%; height: 2px; background: var(--joygo-blue); }
-        .nav-ai { color: #6166fb !important; border: 1px solid var(--joygo-blue); padding: 3px 10px; border-radius: 15px; transition: 0.2s; }
-        .nav-ai:hover { background: var(--joygo-blue); color: white !important; }
 
         main { padding: 30px 10%; max-width: 1200px; margin: 0 auto; min-height: 80vh; }
 
@@ -175,7 +173,7 @@
         .read-time-badge { font-size: 11px; color: var(--joygo-blue); font-weight: bold; margin-bottom: 8px; display: block; }
         .news-info p { font-size: 13px; color: var(--text-muted); -webkit-line-clamp: 2; display: -webkit-box; -webkit-box-orient: vertical; overflow: hidden; }
 
-        #detailView, #aiView { display: none; }
+        #detailView { display: none; }
         .detail-video { width: 100%; aspect-ratio: 16/9; background: #000; border-radius: 12px; overflow: hidden; margin: 20px 0; }
         .detail-content { font-size: 17px; line-height: 1.8; white-space: pre-wrap; margin-bottom: 40px; }
         .detail-read-info { background: var(--bg-page); padding: 10px 15px; border-radius: 8px; font-size: 14px; margin-bottom: 20px; border-left: 4px solid var(--joygo-blue); }
@@ -194,26 +192,6 @@
         .comment-user-img { width: 30px; height: 30px; border-radius: 50%; }
         .comment-name { font-weight: 700; font-size: 14px; }
         .comment-date { font-size: 11px; color: var(--text-muted); }
-
-        /* AI 채팅 인터페이스 스타일 */
-        #aiChatBox {
-            background: var(--bg-card); border: 1px solid var(--border); border-radius: 15px;
-            height: 600px; display: flex; flex-direction: column; overflow: hidden;
-            box-shadow: 0 10px 30px var(--shadow);
-            max-width: 800px; margin: 0 auto;
-        }
-        #aiChatMessages { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 15px; }
-        .chat-bubble { max-width: 85%; padding: 12px 18px; border-radius: 20px; font-size: 15px; line-height: 1.6; word-break: break-word; }
-        .bubble-ai { background: var(--bg-page); align-self: flex-start; color: var(--text-main); border-bottom-left-radius: 4px; box-shadow: 2px 2px 5px var(--shadow); }
-        .bubble-user { background: var(--joygo-blue); align-self: flex-end; color: white; border-bottom-right-radius: 4px; }
-        .ai-input-area { border-top: 1px solid var(--border); padding: 20px; display: flex; gap: 10px; background: var(--header-bg); }
-        .ai-input-field { flex: 1; border: 1px solid var(--border); background: var(--bg-page); color: var(--text-main); padding: 12px 20px; border-radius: 30px; outline: none; font-size: 15px; }
-        .ai-send-btn { background: var(--joygo-blue); color: white; border: none; padding: 0 25px; border-radius: 30px; font-weight: 900; cursor: pointer; transition: 0.2s; }
-        .ai-send-btn:hover { filter: brightness(1.1); }
-        .ai-send-btn:disabled { opacity: 0.5; cursor: not-allowed; }
-        
-        .loading-dots::after { content: '...'; animation: dots 1.5s steps(5, end) infinite; }
-        @keyframes dots { 0%, 20% { content: '.'; } 40% { content: '..'; } 60% { content: '...'; } 80% { content: ''; } }
 
         #toast { position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%); background: #333; color: #fff; padding: 10px 25px; border-radius: 25px; z-index: 3000; display: none; }
 
@@ -265,8 +243,6 @@
                 <li><a href="https://www.joygonews.uk/jebo" target="_blank">제보</a></li>
                 <li><a href="https://www.joygonews.uk/weather" target="_blank">날씨</a></li>
                 <li><a href="https://padlet.com/koreacomsearch/padlet-2ik5nqjo7y4q1qoh" target="_blank">게시판</a></li>
-                <!-- AI 버튼 추가 -->
-                <li><a onclick="location.hash = '#/ai'" id="navAI" class="nav-ai">✨ AI 기자</a></li>
             </ul>
         </nav>
     </header>
@@ -301,24 +277,6 @@
                 <div id="commentList" style="clear:both; margin-top:50px;"></div>
             </div>
         </section>
-
-        <!-- AI 채팅 뷰 -->
-        <section id="aiView">
-            <div style="margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; max-width: 800px; margin: 0 auto 20px;">
-                <h2 style="margin:0;">🤖 AI 기자 '조이고'</h2>
-                <button onclick="location.hash='#'" style="cursor:pointer; background:none; border:1px solid var(--border); color:var(--text-main); padding:5px 15px; border-radius:20px; font-weight:bold;">메인으로</button>
-            </div>
-            <div id="aiChatBox">
-                <div id="aiChatMessages">
-                    <div class="chat-bubble bubble-ai">반가워요! 조이고 뉴스의 <b>인공지능 기자</b>입니다. <br>대구 소식이나 궁금한 점이 있다면 무엇이든 물어보세요!</div>
-                </div>
-                <div class="ai-input-area">
-                    <input type="text" id="aiInputField" class="ai-input-field" placeholder="질문을 입력하세요..." onkeypress="if(event.key==='Enter') window.sendAiMessage()">
-                    <button id="aiSendBtn" class="ai-send-btn" onclick="window.sendAiMessage()">전송</button>
-                </div>
-            </div>
-            <p style="font-size: 11px; color: var(--text-muted); margin-top: 15px; text-align: center;">* Gemini 1.5 Flash-Lite 모델을 사용하며, 하루 1,500회 무료 한도로 운영됩니다.</p>
-        </section>
     </main>
 
     <div id="toast"></div>
@@ -343,66 +301,10 @@
         const provider = new GoogleAuthProvider();
 
         const ADMIN_UID = "OZTa2mFrgnPCk547aGIx6Nvuuyo1";
-        const AI_WORKER_URL = "https://joygonews.2510523.workers.dev/";
 
         let allNews = [];
         let currentNewsId = null;
-        let unsubscribeComments = null;
 
-        // --- AI 채팅 통신 로직 ---
-        window.sendAiMessage = async () => {
-            const input = document.getElementById('aiInputField');
-            const chatMessages = document.getElementById('aiChatMessages');
-            const sendBtn = document.getElementById('aiSendBtn');
-            const prompt = input.value.trim();
-
-            if (!prompt) return;
-
-            // 유저 메시지 화면 추가
-            appendMessage('user', prompt);
-            input.value = '';
-            input.focus();
-
-            // AI 로딩 상태 표시
-            const loadingBubble = appendMessage('ai', '<span class="loading-dots">조이고 기자가 생각 중</span>');
-            sendBtn.disabled = true;
-
-            try {
-                const response = await fetch(AI_WORKER_URL, {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ prompt: prompt })
-                });
-
-                const data = await response.json();
-
-                if (response.status === 429) {
-                    loadingBubble.innerHTML = "🚫 <b>죄송합니다!</b> 오늘의 무료 대화 한도(1,500회)가 모두 소진되었어요. 내일 다시 만나주세요!";
-                } else if (data.candidates && data.candidates[0].content.parts[0].text) {
-                    // 마크다운 형식 간단 대응 (개행문자 변환)
-                    loadingBubble.innerHTML = data.candidates[0].content.parts[0].text.replace(/\n/g, '<br>');
-                } else {
-                    loadingBubble.innerHTML = "죄송해요, 대답을 생성하는 중에 문제가 발생했어요.";
-                }
-            } catch (error) {
-                loadingBubble.innerHTML = "서버와 통신할 수 없습니다. 잠시 후 다시 시도해 주세요.";
-            } finally {
-                sendBtn.disabled = false;
-                chatMessages.scrollTo({ top: chatMessages.scrollHeight, behavior: 'smooth' });
-            }
-        };
-
-        function appendMessage(role, text) {
-            const chatMessages = document.getElementById('aiChatMessages');
-            const bubble = document.createElement('div');
-            bubble.className = `chat-bubble bubble-${role}`;
-            bubble.innerHTML = text;
-            chatMessages.appendChild(bubble);
-            chatMessages.scrollTo({ top: chatMessages.scrollHeight, behavior: 'smooth' });
-            return bubble;
-        }
-
-        // --- 기존 로직들 (뉴스 로드, 검색, 라우팅 등) ---
         function calculateReadTime(text) {
             if (!text) return 1;
             const wordsPerMinute = 500;
@@ -476,7 +378,6 @@
         window.showDetail = async (id) => {
             currentNewsId = id;
             document.getElementById('listView').style.display = 'none';
-            document.getElementById('aiView').style.display = 'none';
             document.getElementById('detailView').style.display = 'block';
             window.scrollTo(0,0);
             const area = document.getElementById('detailArea');
@@ -501,7 +402,7 @@
                     </div>
                     <div class="detail-content">${data.content}</div>
                 `;
-                initComments(id);
+                // 댓글 기능은 필요시 추가 구현 가능
             }
         };
 
@@ -517,7 +418,6 @@
             const hash = window.location.hash;
             document.getElementById('listView').style.display = 'none';
             document.getElementById('detailView').style.display = 'none';
-            document.getElementById('aiView').style.display = 'none';
             document.querySelectorAll('nav ul li a').forEach(a => a.classList.remove('active'));
 
             if(hash.startsWith('#/news/')) {
@@ -525,9 +425,6 @@
             } else if(hash.startsWith('#/search/')) {
                 document.getElementById('listView').style.display = 'block';
                 window.loadNewsData(decodeURIComponent(hash.replace('#/search/', '')));
-            } else if(hash === '#/ai') {
-                document.getElementById('aiView').style.display = 'block';
-                document.getElementById('navAI').classList.add('active');
             } else {
                 document.getElementById('listView').style.display = 'block';
                 document.getElementById('navHome').classList.add('active');
