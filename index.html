@@ -38,6 +38,28 @@
             transition: background 0.3s, color 0.3s;
         }
 
+        /* [VIP] 관리자 전용 구글 4색 링 스타일 */
+        .admin-vip-ring {
+            display: inline-flex;
+            padding: 3px; 
+            background: conic-gradient(
+                #ea4335 0deg 90deg,   
+                #4285f4 90deg 180deg, 
+                #34a853 180deg 270deg, 
+                #fbbc05 270deg 360deg  
+            );
+            border-radius: 50%;
+            vertical-align: middle;
+            transition: transform 0.3s ease;
+        }
+        .admin-vip-ring:hover { transform: scale(1.05); }
+        .admin-vip-ring img {
+            border: 2px solid var(--bg-card); 
+            border-radius: 50%;
+            display: block;
+            background: var(--bg-card);
+        }
+
         #readingProgress {
             position: fixed; top: 0; left: 0; width: 0%; height: 4px;
             background: var(--joygo-blue); z-index: 2001; transition: width 0.1s;
@@ -132,8 +154,9 @@
         }
 
         nav ul { display: flex; gap: 25px; list-style: none; padding: 15px 0 0 0; margin: 0; }
-        nav ul li a { font-size: 16px; font-weight: 700; cursor: pointer; color: var(--text-main); text-decoration: none; }
+        nav ul li a { font-size: 16px; font-weight: 700; cursor: pointer; color: var(--text-main); text-decoration: none; position: relative; }
         nav ul li a.active { color: var(--joygo-blue); }
+        nav ul li a.active::after { content: ''; position: absolute; bottom: -5px; left: 0; width: 100%; height: 2px; background: var(--joygo-blue); }
 
         main { padding: 30px 10%; max-width: 1200px; margin: 0 auto; min-height: 80vh; }
 
@@ -169,19 +192,10 @@
         .comment-user-img { width: 30px; height: 30px; border-radius: 50%; }
         .comment-name { font-weight: 700; font-size: 14px; }
         .comment-date { font-size: 11px; color: var(--text-muted); }
-        .comment-actions { display: flex; gap: 15px; margin-top: 10px; font-size: 12px; }
-        .action-link { cursor: pointer; color: var(--text-muted); transition: 0.2s; }
-        .action-link:hover { color: var(--joygo-blue); }
-        .action-link.red:hover { color: #ff4d4d; }
-
-        .reply-container { margin-left: 40px; margin-top: 10px; border-left: 2px solid var(--border); padding-left: 15px; }
-        .reply-input-box { margin-top: 10px; display: none; }
 
         #toast { position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%); background: #333; color: #fff; padding: 10px 25px; border-radius: 25px; z-index: 3000; display: none; }
 
-        @media (max-width: 1100px) {
-            .info-panel { display: none; }
-        }
+        @media (max-width: 1100px) { .info-panel { display: none; } }
         @media (max-width: 900px) {
             .header-main { flex-wrap: wrap; }
             .breaking-news { order: 3; max-width: 100%; width: 100%; margin-top: 10px; }
@@ -234,6 +248,7 @@
     </header>
 
     <main>
+        <!-- 리스트 뷰 -->
         <section id="listView">
             <div id="searchResultTitle" style="display:none; margin-bottom:20px;">
                 <h2 id="searchText"></h2>
@@ -242,6 +257,7 @@
             <div class="news-grid" id="newsGrid"></div>
         </section>
 
+        <!-- 상세 뷰 -->
         <section id="detailView">
             <button onclick="location.hash='#'" style="cursor:pointer; background:none; border:1px solid var(--border); color:var(--text-main); padding:5px 10px; border-radius:5px;">← 뒤로가기</button>
             <div id="detailArea"></div>
@@ -284,15 +300,15 @@
         const db = getFirestore(app);
         const provider = new GoogleAuthProvider();
 
+        const ADMIN_UID = "OZTa2mFrgnPCk547aGIx6Nvuuyo1";
+
         let allNews = [];
         let currentNewsId = null;
-        let unsubscribeComments = null;
 
         function calculateReadTime(text) {
             if (!text) return 1;
             const wordsPerMinute = 500;
-            const minutes = Math.ceil(text.length / wordsPerMinute);
-            return minutes;
+            return Math.ceil(text.length / wordsPerMinute);
         }
 
         window.login = () => signInWithPopup(auth, provider);
@@ -366,251 +382,52 @@
             window.scrollTo(0,0);
             const area = document.getElementById('detailArea');
             area.innerHTML = '상세 내용을 불러오는 중...';
-            
             const newsRef = doc(db, "news", id);
-            
             if (!sessionStorage.getItem(`viewed_${id}`)) {
                 try {
                     await updateDoc(newsRef, { views: increment(1) });
                     sessionStorage.setItem(`viewed_${id}`, 'true');
                 } catch(e) { console.error("조회수 업데이트 오류:", e); }
             }
-
             const snap = await getDoc(newsRef);
             if(snap.exists()) {
                 const data = snap.data();
                 const readTime = calculateReadTime(data.content || "");
-                const viewCount = data.views || 0;
                 area.innerHTML = `
                     <h1 style="font-size:28px; margin-top:20px; line-height:1.4;">${data.title}</h1>
-                    <p style="color:var(--text-muted); font-size:13px;">작성자: ${data.author || '익명'} | ${data.createdAt ? new Date(data.createdAt.seconds*1000).toLocaleString() : ''} | 조회수 ${viewCount}회</p>
-                    <div class="detail-read-info">
-                        ✨ <b>이 기사는 읽는 데 약 ${readTime}분 정도 소요됩니다.</b> 편안하게 감상해 보세요!
-                    </div>
+                    <p style="color:var(--text-muted); font-size:13px;">작성자: ${data.author || '익명'} | ${data.createdAt ? new Date(data.createdAt.seconds*1000).toLocaleString() : ''} | 조회수 ${data.views || 0}회</p>
+                    <div class="detail-read-info">✨ <b>이 기사는 읽는 데 약 ${readTime}분 정도 소요됩니다.</b></div>
                     <div class="detail-video">
-                        <iframe width="100%" height="100%" src="https://www.youtube.com/embed/${data.youtubeId}" frameborder="0" allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+                        <iframe width="100%" height="100%" src="https://www.youtube.com/embed/${data.youtubeId}" frameborder="0" allowfullscreen></iframe>
                     </div>
                     <div class="detail-content">${data.content}</div>
                 `;
-                initComments(id);
+                // 댓글 기능은 필요시 추가 구현 가능
             }
         };
 
         const searchInput = document.getElementById('searchInput');
-        const autocompleteList = document.getElementById('autocompleteList');
-
-        // [추가] 인기 리스트 렌더링 함수
-        function renderPopularList() {
-            autocompleteList.innerHTML = '<div class="autocomplete-header">🔥 인기 뉴스 TOP 10</div>';
-            // 조회수 기준 내림차순 정렬하여 상위 10개만 추출
-            const popularNews = [...allNews].sort((a, b) => (b.views || 0) - (a.views || 0)).slice(0, 10);
-            
-            popularNews.forEach((m, index) => {
-                const item = document.createElement('div');
-                item.className = 'autocomplete-item';
-                item.innerHTML = `
-                    <span style="overflow:hidden; text-overflow:ellipsis;">
-                        <span class="item-rank">${index + 1}</span>${m.title}
-                    </span>
-                    <span class="item-meta">${m.views || 0}회</span>
-                `;
-                item.onclick = () => {
-                    searchInput.value = m.title;
-                    autocompleteList.style.display = 'none';
-                    location.hash = `#/news/${m.id}`;
-                };
-                autocompleteList.appendChild(item);
-            });
-            autocompleteList.style.display = 'block';
-        }
-
-        // 검색창 포커스(클릭) 이벤트
-        searchInput.addEventListener('focus', () => {
-            if (!searchInput.value.trim()) {
-                renderPopularList();
-            }
-        });
-
-        // 입력 시 자동완성 이벤트
-        searchInput.addEventListener('input', (e) => {
-            const val = e.target.value.trim().toLowerCase();
-            autocompleteList.innerHTML = '';
-            if (!val) {
-                renderPopularList(); // 입력값이 없으면 다시 인기 리스트 표시
-                return;
-            }
-            const matches = allNews.filter(n => n.title.toLowerCase().includes(val)).slice(0, 8);
-            if (matches.length > 0) {
-                autocompleteList.innerHTML = '<div class="autocomplete-header">🔍 검색 결과</div>';
-                matches.forEach(m => {
-                    const item = document.createElement('div');
-                    item.className = 'autocomplete-item';
-                    item.innerText = m.title;
-                    item.onclick = () => {
-                        searchInput.value = m.title;
-                        autocompleteList.style.display = 'none';
-                        location.hash = `#/news/${m.id}`;
-                    };
-                    autocompleteList.appendChild(item);
-                });
-                autocompleteList.style.display = 'block';
-            } else {
-                autocompleteList.style.display = 'none';
-            }
-        });
-
-        document.addEventListener('click', (e) => {
-            if (!document.getElementById('searchContainer').contains(e.target)) {
-                autocompleteList.style.display = 'none';
-            }
-        });
-
         searchInput.onkeypress = (e) => {
             if(e.key === 'Enter') {
                 const keyword = searchInput.value.trim();
-                if(keyword) {
-                    autocompleteList.style.display = 'none';
-                    location.hash = `#/search/${encodeURIComponent(keyword)}`;
-                }
+                if(keyword) location.hash = `#/search/${encodeURIComponent(keyword)}`;
             }
-        };
-
-        async function initComments(newsId) {
-            if(unsubscribeComments) unsubscribeComments();
-            const list = document.getElementById('commentList');
-            const q = query(collection(db, "news", newsId, "comments"), orderBy("createdAt", "asc"));
-            unsubscribeComments = onSnapshot(q, (snap) => {
-                document.getElementById('commentCount').innerText = snap.size;
-                list.innerHTML = '';
-                snap.docs.forEach(d => {
-                    const c = d.data();
-                    const isMyComment = auth.currentUser?.uid === c.uid;
-                    const card = document.createElement('div');
-                    card.className = 'comment-card';
-                    card.innerHTML = `
-                        <div class="comment-header">
-                            <img src="${c.userImg || 'https://via.placeholder.com/30'}" class="comment-user-img">
-                            <div>
-                                <span class="comment-name">${c.userName}</span>
-                                <span class="comment-date">${c.createdAt ? new Date(c.createdAt.seconds*1000).toLocaleString() : '방금 전'}</span>
-                            </div>
-                        </div>
-                        <div id="text-${d.id}">${c.text}</div>
-                        <div class="comment-actions">
-                            <span class="action-link" onclick="window.toggleReply('${d.id}')">답글</span>
-                            ${isMyComment ? `<span class="action-link" onclick="window.editComment('${d.id}', '${c.text.replace(/'/g, "\\'")}')">수정</span>` : ''}
-                            ${isMyComment ? `<span class="action-link red" onclick="window.deleteComment('${d.id}')">삭제</span>` : ''}
-                            <span class="action-link red" onclick="window.reportComment('${d.id}')">신고</span>
-                        </div>
-                        <div id="reply-box-${d.id}" class="reply-input-box">
-                            <textarea id="reply-input-${d.id}" class="comment-input" placeholder="답글을 남겨주세요." rows="2"></textarea>
-                            <button onclick="window.submitReply('${d.id}')" style="margin-top:5px; padding:5px 15px; background:var(--joygo-blue); color:white; border:none; border-radius:5px; cursor:pointer;">답글 등록</button>
-                        </div>
-                        <div id="replies-${d.id}" class="reply-container"></div>
-                    `;
-                    list.appendChild(card);
-                    loadReplies(newsId, d.id);
-                });
-            });
-        }
-
-        async function loadReplies(newsId, commentId) {
-            const replyList = document.getElementById(`replies-${commentId}`);
-            const q = query(collection(db, "news", newsId, "comments", commentId, "replies"), orderBy("createdAt", "asc"));
-            onSnapshot(q, (snap) => {
-                if(!replyList) return;
-                replyList.innerHTML = snap.docs.map(rd => {
-                    const r = rd.data();
-                    return `
-                        <div style="font-size:13px; margin-bottom:10px; padding:5px 0; border-bottom: 1px dashed var(--border);">
-                            <strong>${r.userName}</strong>: ${r.text} 
-                            <small style="color:gray; margin-left:5px">${r.createdAt ? new Date(r.createdAt.seconds*1000).toLocaleTimeString() : '방금 전'}</small>
-                        </div>
-                    `;
-                }).join('');
-            });
-        }
-
-        window.submitComment = async () => {
-            if(!auth.currentUser) return window.showToast("로그인이 필요합니다.");
-            const input = document.getElementById('commentInput');
-            const text = input.value.trim();
-            if(!text) return;
-            try {
-                await addDoc(collection(db, "news", currentNewsId, "comments"), {
-                    text: text, uid: auth.currentUser.uid, userName: auth.currentUser.displayName, userImg: auth.currentUser.photoURL,
-                    createdAt: serverTimestamp()
-                });
-                input.value = '';
-                window.showToast("댓글이 등록되었습니다.");
-            } catch(e) { window.showToast("등록 실패"); }
-        };
-
-        window.submitReply = async (commentId) => {
-            if(!auth.currentUser) return window.showToast("로그인이 필요합니다.");
-            const input = document.getElementById(`reply-input-${commentId}`);
-            const text = input.value.trim();
-            if(!text) return;
-            try {
-                await addDoc(collection(db, "news", currentNewsId, "comments", commentId, "replies"), {
-                    text: text, uid: auth.currentUser.uid, userName: auth.currentUser.displayName, createdAt: serverTimestamp()
-                });
-                input.value = '';
-                window.toggleReply(commentId);
-                window.showToast("답글이 등록되었습니다.");
-            } catch(e) { window.showToast("답글 등록 실패"); }
-        };
-
-        window.deleteComment = async (id) => {
-            if(confirm("댓글을 삭제하시겠습니까?")) {
-                await deleteDoc(doc(db, "news", currentNewsId, "comments", id));
-                window.showToast("삭제되었습니다.");
-            }
-        };
-
-        window.editComment = async (id, oldText) => {
-            const newText = prompt("댓글 수정:", oldText);
-            if(newText && newText !== oldText) {
-                await updateDoc(doc(db, "news", currentNewsId, "comments", id), { text: newText });
-                window.showToast("수정되었습니다.");
-            }
-        };
-
-        window.toggleReply = (id) => {
-            const box = document.getElementById(`reply-box-${id}`);
-            if(box) box.style.display = box.style.display === 'block' ? 'none' : 'block';
-        };
-
-        window.reportComment = (id) => {
-            alert("신고가 접수되었습니다. 검토 후 처리하겠습니다.");
-        };
-
-        window.copyLink = () => {
-            const url = window.location.href;
-            const dummy = document.createElement('input');
-            document.body.appendChild(dummy);
-            dummy.value = url; dummy.select();
-            document.execCommand('copy');
-            document.body.removeChild(dummy);
-            window.showToast("링크가 복사되었습니다!");
-        };
-
-        window.shareTwitter = () => {
-            const text = "조이고 뉴스에서 이 소식을 확인해보세요!";
-            window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(window.location.href)}`);
         };
 
         function handleRoute() {
             const hash = window.location.hash;
+            document.getElementById('listView').style.display = 'none';
+            document.getElementById('detailView').style.display = 'none';
+            document.querySelectorAll('nav ul li a').forEach(a => a.classList.remove('active'));
+
             if(hash.startsWith('#/news/')) {
                 window.showDetail(hash.replace('#/news/', ''));
             } else if(hash.startsWith('#/search/')) {
                 document.getElementById('listView').style.display = 'block';
-                document.getElementById('detailView').style.display = 'none';
                 window.loadNewsData(decodeURIComponent(hash.replace('#/search/', '')));
             } else {
                 document.getElementById('listView').style.display = 'block';
-                document.getElementById('detailView').style.display = 'none';
+                document.getElementById('navHome').classList.add('active');
                 window.loadNewsData();
             }
         }
@@ -620,7 +437,11 @@
         onAuthStateChanged(auth, (user) => {
             const container = document.getElementById('authContainer');
             if(user) {
-                container.innerHTML = `<img src="${user.photoURL}" style="width:30px; border-radius:50%; cursor:pointer" title="로그아웃" onclick="confirm('로그아웃 하시겠습니까?') && signOut(auth)">`;
+                const isOwner = user.uid === ADMIN_UID;
+                const profileImgHtml = isOwner
+                    ? `<div class="admin-vip-ring"><img src="${user.photoURL}" style="width:30px;" title="관리자"></div>`
+                    : `<img src="${user.photoURL}" style="width:30px; border-radius:50%;" title="로그아웃">`;
+                container.innerHTML = `<div onclick="confirm('로그아웃 하시겠습니까?') && signOut(auth)" style="cursor:pointer;">${profileImgHtml}</div>`;
             } else {
                 container.innerHTML = `<button onclick="window.login()" style="padding:5px 12px; background:var(--joygo-blue); color:white; border:none; border-radius:20px; cursor:pointer; font-size:12px; font-weight:bold;">로그인</button>`;
             }
