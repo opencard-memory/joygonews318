@@ -177,6 +177,25 @@
         .reply-container { margin-left: 40px; margin-top: 10px; border-left: 2px solid var(--border); padding-left: 15px; }
         .reply-input-box { margin-top: 10px; display: none; }
 
+        /* 닉네임 설정 모달 스타일 */
+        #nicknameModal {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.7); display: none; justify-content: center; align-items: center; z-index: 9999;
+        }
+        .modal-content {
+            background: var(--bg-card); padding: 30px; border-radius: 15px; width: 350px; text-align: center;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        }
+        .modal-content h2 { margin-top: 0; font-size: 20px; }
+        .modal-input {
+            width: 100%; padding: 12px; border-radius: 8px; border: 1px solid var(--border);
+            margin: 15px 0; box-sizing: border-box; font-size: 16px; background: var(--bg-page); color: var(--text-main);
+        }
+        .modal-btn {
+            background: var(--joygo-blue); color: white; border: none; padding: 12px 20px;
+            border-radius: 8px; width: 100%; font-weight: bold; cursor: pointer;
+        }
+
         #toast { position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%); background: #333; color: #fff; padding: 10px 25px; border-radius: 25px; z-index: 3000; display: none; }
 
         @media (max-width: 1100px) {
@@ -192,6 +211,16 @@
 
     <div id="readingProgress"></div>
     <div class="top-accent-bar"></div>
+
+    <!-- 닉네임 설정 모달 -->
+    <div id="nicknameModal">
+        <div class="modal-content">
+            <h2>반갑습니다! 👋</h2>
+            <p style="font-size: 14px; color: var(--text-muted);">사용하실 닉네임을 설정해주세요.</p>
+            <input type="text" id="nicknameInput" class="modal-input" placeholder="닉네임 (최대 10자)" maxlength="10">
+            <button id="saveNicknameBtn" class="modal-btn">시작하기</button>
+        </div>
+    </div>
 
     <header>
         <div class="header-main">
@@ -268,7 +297,7 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js";
         import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js";
-        import { getFirestore, collection, addDoc, getDocs, getDoc, doc, query, orderBy, serverTimestamp, onSnapshot, updateDoc, deleteDoc, increment } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
+        import { getFirestore, collection, addDoc, getDocs, getDoc, doc, setDoc, query, orderBy, serverTimestamp, onSnapshot, updateDoc, deleteDoc, increment } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyDOu8jfgNproVHenknRdsG-HPScyFMdO0k",
@@ -286,7 +315,73 @@
 
         let allNews = [];
         let currentNewsId = null;
+        let userNickname = ""; // 전역 유저 닉네임 저장
         let unsubscribeComments = null;
+
+        // [추가] 유저 프로필 체크 및 설정 함수
+        async function checkUserProfile(user) {
+            if (!user) return;
+            const userDocRef = doc(db, "users", user.uid);
+            const userSnap = await getDoc(userDocRef);
+
+            if (userSnap.exists()) {
+                // 이미 설정된 닉네임이 있는 경우
+                userNickname = userSnap.data().nickname;
+                updateAuthUI(user);
+            } else {
+                // 첫 로그인인 경우 모달 띄우기
+                const modal = document.getElementById('nicknameModal');
+                const nickInput = document.getElementById('nicknameInput');
+                const saveBtn = document.getElementById('saveNicknameBtn');
+                
+                modal.style.display = 'flex';
+                nickInput.value = user.displayName; // 기본값은 구글 이름
+
+                saveBtn.onclick = async () => {
+                    const nick = nickInput.value.trim();
+                    if (!nick) return alert("닉네임을 입력해주세요.");
+                    
+                    try {
+                        await setDoc(userDocRef, {
+                            uid: user.uid,
+                            nickname: nick,
+                            photoURL: user.photoURL,
+                            email: user.email,
+                            createdAt: serverTimestamp()
+                        });
+                        userNickname = nick;
+                        modal.style.display = 'none';
+                        updateAuthUI(user);
+                        window.showToast("닉네임 설정 완료!");
+                    } catch (e) {
+                        console.error(e);
+                        alert("설정 중 오류가 발생했습니다.");
+                    }
+                };
+            }
+        }
+
+        // [추가] 로그인 후 상단 UI 업데이트
+        function updateAuthUI(user) {
+            const container = document.getElementById('authContainer');
+            if (user) {
+                container.innerHTML = `
+                    <div style="display:flex; align-items:center; gap:8px;">
+                        <span style="font-size:12px; font-weight:bold; color:var(--joygo-blue)">${userNickname}님</span>
+                        <img src="${user.photoURL}" style="width:30px; border-radius:50%; cursor:pointer" title="로그아웃" onclick="window.handleSignOut()">
+                    </div>
+                `;
+            } else {
+                container.innerHTML = `<button onclick="window.login()" style="padding:5px 12px; background:var(--joygo-blue); color:white; border:none; border-radius:20px; cursor:pointer; font-size:12px; font-weight:bold;">로그인</button>`;
+            }
+        }
+
+        window.handleSignOut = () => {
+            if (confirm('로그아웃 하시겠습니까?')) {
+                signOut(auth);
+                userNickname = "";
+            }
+        };
 
         function calculateReadTime(text) {
             if (!text) return 1;
@@ -399,10 +494,8 @@
         const searchInput = document.getElementById('searchInput');
         const autocompleteList = document.getElementById('autocompleteList');
 
-        // [추가] 인기 리스트 렌더링 함수
         function renderPopularList() {
             autocompleteList.innerHTML = '<div class="autocomplete-header">🔥 인기 뉴스 TOP 10</div>';
-            // 조회수 기준 내림차순 정렬하여 상위 10개만 추출
             const popularNews = [...allNews].sort((a, b) => (b.views || 0) - (a.views || 0)).slice(0, 10);
             
             popularNews.forEach((m, index) => {
@@ -424,19 +517,17 @@
             autocompleteList.style.display = 'block';
         }
 
-        // 검색창 포커스(클릭) 이벤트
         searchInput.addEventListener('focus', () => {
             if (!searchInput.value.trim()) {
                 renderPopularList();
             }
         });
 
-        // 입력 시 자동완성 이벤트
         searchInput.addEventListener('input', (e) => {
             const val = e.target.value.trim().toLowerCase();
             autocompleteList.innerHTML = '';
             if (!val) {
-                renderPopularList(); // 입력값이 없으면 다시 인기 리스트 표시
+                renderPopularList();
                 return;
             }
             const matches = allNews.filter(n => n.title.toLowerCase().includes(val)).slice(0, 8);
@@ -533,12 +624,17 @@
 
         window.submitComment = async () => {
             if(!auth.currentUser) return window.showToast("로그인이 필요합니다.");
+            if(!userNickname) return window.showToast("닉네임 설정이 필요합니다.");
+            
             const input = document.getElementById('commentInput');
             const text = input.value.trim();
             if(!text) return;
             try {
                 await addDoc(collection(db, "news", currentNewsId, "comments"), {
-                    text: text, uid: auth.currentUser.uid, userName: auth.currentUser.displayName, userImg: auth.currentUser.photoURL,
+                    text: text, 
+                    uid: auth.currentUser.uid, 
+                    userName: userNickname, // 설정된 닉네임 사용
+                    userImg: auth.currentUser.photoURL,
                     createdAt: serverTimestamp()
                 });
                 input.value = '';
@@ -553,7 +649,10 @@
             if(!text) return;
             try {
                 await addDoc(collection(db, "news", currentNewsId, "comments", commentId, "replies"), {
-                    text: text, uid: auth.currentUser.uid, userName: auth.currentUser.displayName, createdAt: serverTimestamp()
+                    text: text, 
+                    uid: auth.currentUser.uid, 
+                    userName: userNickname, // 설정된 닉네임 사용
+                    createdAt: serverTimestamp()
                 });
                 input.value = '';
                 window.toggleReply(commentId);
@@ -581,8 +680,18 @@
             if(box) box.style.display = box.style.display === 'block' ? 'none' : 'block';
         };
 
-        window.reportComment = (id) => {
-            alert("신고가 접수되었습니다. 검토 후 처리하겠습니다.");
+        window.reportComment = async (id) => {
+            if(confirm("이 댓글을 신고하시겠습니까?")) {
+                try {
+                    await addDoc(collection(db, "reports"), {
+                        commentId: id,
+                        reporterUid: auth.currentUser?.uid || 'anonymous',
+                        reason: "부적절한 콘텐츠",
+                        createdAt: serverTimestamp()
+                    });
+                    alert("신고가 접수되었습니다. 검토 후 처리하겠습니다.");
+                } catch(e) { window.showToast("신고 접수 실패"); }
+            }
         };
 
         window.copyLink = () => {
@@ -618,11 +727,10 @@
         window.addEventListener('load', handleRoute);
 
         onAuthStateChanged(auth, (user) => {
-            const container = document.getElementById('authContainer');
             if(user) {
-                container.innerHTML = `<img src="${user.photoURL}" style="width:30px; border-radius:50%; cursor:pointer" title="로그아웃" onclick="confirm('로그아웃 하시겠습니까?') && signOut(auth)">`;
+                checkUserProfile(user);
             } else {
-                container.innerHTML = `<button onclick="window.login()" style="padding:5px 12px; background:var(--joygo-blue); color:white; border:none; border-radius:20px; cursor:pointer; font-size:12px; font-weight:bold;">로그인</button>`;
+                updateAuthUI(null);
             }
         });
     </script>
