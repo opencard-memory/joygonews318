@@ -25,16 +25,19 @@
         
         .submit-btn { width: 100%; background: var(--joygo-blue); color: white; border: none; padding: 18px; border-radius: 10px; font-weight: 800; font-size: 16px; cursor: pointer; transition: opacity 0.2s; }
         .submit-btn:hover { opacity: 0.9; }
+        .submit-btn:disabled { background: #ccc; cursor: not-allowed; }
         
         .back-link { text-align: center; margin-top: 20px; font-size: 14px; color: #888; cursor: pointer; }
         
         /* 로딩 마스크 */
-        #loading { position: fixed; top:0; left:0; width:100%; height:100%; background:white; display:flex; justify-content:center; align-items:center; z-index: 9999; }
+        #loading { position: fixed; top:0; left:0; width:100%; height:100%; background:white; display:flex; flex-direction:column; justify-content:center; align-items:center; z-index: 9999; }
     </style>
 </head>
 <body>
 
-    <div id="loading">잠시만 기다려주세요...</div>
+    <div id="loading">
+        <p>사용자 정보를 확인 중입니다...</p>
+    </div>
 
     <div class="report-card">
         <div class="logo" onclick="location.href='index.html'">
@@ -62,9 +65,9 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js";
         import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js";
-        import { getFirestore, collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
+        import { getFirestore, collection, addDoc, serverTimestamp, getDoc, doc } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
 
-        // Firebase 설정 (메인 페이지와 동일하게 유지하세요)
+        // Firebase 설정
         const firebaseConfig = {
             apiKey: "AIzaSyDOu8jfgNproVHenknRdsG-HPScyFMdO0k",
             authDomain: "joygonews318.firebaseapp.com",
@@ -79,13 +82,33 @@
         const auth = getAuth(app);
         const db = getFirestore(app);
 
-        // 1. 보안 체크: 로그인 여부 확인
-        onAuthStateChanged(auth, (user) => {
+        // 현재 로그인한 사용자의 닉네임을 담을 변수
+        let currentUserNickname = "";
+
+        // 1. 보안 체크 및 닉네임 미리 가져오기
+        onAuthStateChanged(auth, async (user) => {
             if (!user) {
                 alert("로그인이 필요한 페이지입니다. 메인으로 이동합니다.");
-                location.href = "index.html"; // 로그인 안 했으면 쫓아냄
+                location.href = "index.html"; 
             } else {
-                document.getElementById('loading').style.display = 'none'; // 로그인 했으면 로딩창 끄기
+                try {
+                    // 유저 컬렉션에서 닉네임 조회
+                    const userDocRef = doc(db, "users", user.uid);
+                    const userSnap = await getDoc(userDocRef);
+                    
+                    if (userSnap.exists()) {
+                        currentUserNickname = userSnap.data().nickname;
+                    } else {
+                        // 닉네임 설정이 안 되어있다면 구글 이름이라도 사용
+                        currentUserNickname = user.displayName || "익명 제보자";
+                    }
+                    
+                    document.getElementById('loading').style.display = 'none'; 
+                } catch (e) {
+                    console.error("사용자 정보 로드 실패:", e);
+                    currentUserNickname = user.displayName || "익명 제보자";
+                    document.getElementById('loading').style.display = 'none';
+                }
             }
         });
 
@@ -98,29 +121,40 @@
 
         // 3. 제보 버튼 클릭 이벤트
         document.getElementById('submitBtn').onclick = async () => {
-            const title = document.getElementById('newsTitle').value;
-            const url = document.getElementById('newsYoutube').value;
-            const content = document.getElementById('newsContent').value;
+            const title = document.getElementById('newsTitle').value.trim();
+            const url = document.getElementById('newsYoutube').value.trim();
+            const content = document.getElementById('newsContent').value.trim();
             const videoId = getYoutubeID(url);
+            const btn = document.getElementById('submitBtn');
 
             if (!title || !videoId || !content) {
-                alert("모든 빈칸을 채워주세요!");
+                alert("모든 빈칸을 채워주세요! 유튜브 링크가 올바른지도 확인해 주세요.");
                 return;
             }
 
+            // 버튼 중복 클릭 방지
+            btn.disabled = true;
+            btn.innerText = "업로드 중...";
+
             try {
+                // 기사 데이터를 news 컬렉션에 추가
                 await addDoc(collection(db, "news"), {
                     title: title,
                     youtubeId: videoId,
                     content: content,
-                    author: auth.currentUser.displayName,
+                    author: currentUserNickname, // <--- 여기서 저장된 닉네임을 사용!
                     authorUid: auth.currentUser.uid,
+                    views: 0, // 초기 조회수 0
                     createdAt: serverTimestamp()
                 });
-                alert("제보가 완료되었습니다! 메인 피드에서 확인하세요.");
-                location.href = "index.html"; // 성공 후 메인으로 이동
+                
+                alert("제보가 성공적으로 완료되었습니다!");
+                location.href = "index.html"; 
             } catch (e) {
-                alert("제보 중 오류가 발생했습니다.");
+                console.error("제보 오류:", e);
+                alert("제보 중 오류가 발생했습니다. 다시 시도해 주세요.");
+                btn.disabled = false;
+                btn.innerText = "제보 완료하기";
             }
         };
     </script>
