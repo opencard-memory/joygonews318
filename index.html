@@ -177,7 +177,6 @@
         .reply-container { margin-left: 40px; margin-top: 10px; border-left: 2px solid var(--border); padding-left: 15px; }
         .reply-input-box { margin-top: 10px; display: none; }
 
-        /* 닉네임 설정 모달 스타일 */
         #nicknameModal {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(0,0,0,0.7); display: none; justify-content: center; align-items: center; z-index: 9999;
@@ -212,7 +211,6 @@
     <div id="readingProgress"></div>
     <div class="top-accent-bar"></div>
 
-    <!-- 닉네임 설정 모달 -->
     <div id="nicknameModal">
         <div class="modal-content">
             <h2>반갑습니다! 👋</h2>
@@ -258,6 +256,8 @@
                 <li><a href="https://www.joygonews.uk/jebo" target="_blank">제보</a></li>
                 <li><a href="https://www.joygonews.uk/weather" target="_blank">날씨</a></li>
                 <li><a href="https://padlet.com/koreacomsearch/padlet-2ik5nqjo7y4q1qoh" target="_blank">게시판</a></li>
+                <!-- 지도 버튼 추가됨 -->
+                <li><a href="https://map.joygonews.uk/" target="_blank">지도</a></li>
             </ul>
         </nav>
     </header>
@@ -315,27 +315,24 @@
 
         let allNews = [];
         let currentNewsId = null;
-        let userNickname = ""; // 전역 유저 닉네임 저장
+        let userNickname = "";
         let unsubscribeComments = null;
 
-        // [추가] 유저 프로필 체크 및 설정 함수
         async function checkUserProfile(user) {
             if (!user) return;
             const userDocRef = doc(db, "users", user.uid);
             const userSnap = await getDoc(userDocRef);
 
             if (userSnap.exists()) {
-                // 이미 설정된 닉네임이 있는 경우
                 userNickname = userSnap.data().nickname;
                 updateAuthUI(user);
             } else {
-                // 첫 로그인인 경우 모달 띄우기
                 const modal = document.getElementById('nicknameModal');
                 const nickInput = document.getElementById('nicknameInput');
                 const saveBtn = document.getElementById('saveNicknameBtn');
                 
                 modal.style.display = 'flex';
-                nickInput.value = user.displayName; // 기본값은 구글 이름
+                nickInput.value = user.displayName;
 
                 saveBtn.onclick = async () => {
                     const nick = nickInput.value.trim();
@@ -361,7 +358,6 @@
             }
         }
 
-        // [추가] 로그인 후 상단 UI 업데이트
         function updateAuthUI(user) {
             const container = document.getElementById('authContainer');
             if (user) {
@@ -633,7 +629,7 @@
                 await addDoc(collection(db, "news", currentNewsId, "comments"), {
                     text: text, 
                     uid: auth.currentUser.uid, 
-                    userName: userNickname, // 설정된 닉네임 사용
+                    userName: userNickname,
                     userImg: auth.currentUser.photoURL,
                     createdAt: serverTimestamp()
                 });
@@ -651,7 +647,7 @@
                 await addDoc(collection(db, "news", currentNewsId, "comments", commentId, "replies"), {
                     text: text, 
                     uid: auth.currentUser.uid, 
-                    userName: userNickname, // 설정된 닉네임 사용
+                    userName: userNickname,
                     createdAt: serverTimestamp()
                 });
                 input.value = '';
